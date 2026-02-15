@@ -1,6 +1,6 @@
 # AgentPier API Specification
 
-**Base URL:** `https://api.agentpier.io/v1`
+**Base URL:** `https://api.agentpier.org/v1`
 
 ## Authentication
 
@@ -55,7 +55,7 @@ POST /listings
   "status": "active",
   "trust_score": 0.0,
   "created_at": "2026-02-14T18:00:00Z",
-  "url": "https://agentpier.io/listing/lst_abc123"
+  "url": "https://agentpier.org/listing/lst_abc123"
 }
 ```
 
