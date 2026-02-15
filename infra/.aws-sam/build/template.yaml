@@ -167,7 +167,7 @@ Resources:
       Handler: handlers.auth.get_me
       CodeUri: GetMeFunction
       Policies:
-      - DynamoDBReadPolicy:
+      - DynamoDBCrudPolicy:
           TableName:
             Ref: AgentPierTable
       Events:

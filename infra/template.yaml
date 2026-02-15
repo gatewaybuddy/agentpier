@@ -150,7 +150,7 @@ Resources:
       Handler: handlers.auth.get_me
       CodeUri: ../src/
       Policies:
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref AgentPierTable
       Events:
         Api:

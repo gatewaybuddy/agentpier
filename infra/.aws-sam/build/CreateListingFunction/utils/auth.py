@@ -43,28 +43,31 @@ def authenticate(event: dict) -> dict | None:
     if not api_key:
         return None
     
-    key_hash = hash_key(api_key)
-    
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(TABLE_NAME)
-    
-    # Look up the key hash in GSI2 (api key index)
-    response = table.query(
-        IndexName="GSI2",
-        KeyConditionExpression=Key("GSI2PK").eq(f"APIKEY#{key_hash}"),
-    )
-    
-    items = response.get("Items", [])
-    if not items:
+    try:
+        key_hash = hash_key(api_key)
+        
+        dynamodb = boto3.resource("dynamodb")
+        table = dynamodb.Table(TABLE_NAME)
+        
+        # Look up the key hash in GSI2 (api key index)
+        response = table.query(
+            IndexName="GSI2",
+            KeyConditionExpression=Key("GSI2PK").eq(f"APIKEY#{key_hash}"),
+        )
+        
+        items = response.get("Items", [])
+        if not items:
+            return None
+        
+        # Get the full user record
+        user_id = items[0].get("user_id")
+        if not user_id:
+            return None
+        
+        user_response = table.get_item(
+            Key={"PK": f"USER#{user_id}", "SK": "META"}
+        )
+        
+        return user_response.get("Item")
+    except Exception:
         return None
-    
-    # Get the full user record
-    user_id = items[0].get("user_id")
-    if not user_id:
-        return None
-    
-    user_response = table.get_item(
-        Key={"PK": f"USER#{user_id}", "SK": "META"}
-    )
-    
-    return user_response.get("Item")

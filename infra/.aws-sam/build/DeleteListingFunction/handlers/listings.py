@@ -35,7 +35,10 @@ def create_listing(event, context):
         return unauthorized()
 
     try:
-        body = json.loads(event.get("body", "{}"))
+        raw_body = event.get("body")
+        if not raw_body:
+            return error("Request body is required", "missing_body")
+        body = json.loads(raw_body)
     except json.JSONDecodeError:
         return error("Invalid JSON body", "invalid_body")
 
@@ -122,13 +125,9 @@ def get_listing(event, context):
     if not item:
         return not_found(f"Listing {listing_id} not found")
 
-    # Strip DynamoDB keys from response
-    item.pop("PK", None)
-    item.pop("SK", None)
-    item.pop("GSI1PK", None)
-    item.pop("GSI1SK", None)
-    item.pop("GSI2PK", None)
-    item.pop("GSI2SK", None)
+    # Strip internal fields from response
+    for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
+        item.pop(key, None)
 
     return success(item)
 
@@ -146,9 +145,15 @@ def search_listings(event, context):
 
     state = params.get("state", "").upper()
     city = params.get("city", "").lower().replace(" ", "_")
-    limit = min(int(params.get("limit", "20")), 50)
+    try:
+        limit = max(1, min(int(params.get("limit", "20")), 50))
+    except (ValueError, TypeError):
+        limit = 20
     cursor = params.get("cursor")
-    min_trust = float(params.get("min_trust", "0"))
+    try:
+        min_trust = max(0.0, min(float(params.get("min_trust", "0")), 1.0))
+    except (ValueError, TypeError):
+        min_trust = 0.0
 
     table = _get_table()
 
@@ -167,9 +172,17 @@ def search_listings(event, context):
 
     if cursor:
         import base64
-        query_kwargs["ExclusiveStartKey"] = json.loads(
-            base64.b64decode(cursor).decode()
-        )
+        try:
+            decoded = json.loads(base64.b64decode(cursor).decode())
+            # Validate cursor has expected GSI1 keys only
+            if not isinstance(decoded, dict) or "GSI1PK" not in decoded:
+                return error("Invalid pagination cursor", "invalid_cursor")
+            # Only allow keys that belong to the queried category
+            if decoded.get("GSI1PK") != category:
+                return error("Invalid pagination cursor", "invalid_cursor")
+            query_kwargs["ExclusiveStartKey"] = decoded
+        except Exception:
+            return error("Invalid pagination cursor", "invalid_cursor")
 
     response = table.query(**query_kwargs)
     items = response.get("Items", [])
@@ -178,9 +191,9 @@ def search_listings(event, context):
     if min_trust > 0:
         items = [i for i in items if float(i.get("trust_score", 0)) >= min_trust]
 
-    # Clean up DynamoDB keys
+    # Clean up internal fields
     for item in items:
-        for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK"]:
+        for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
             item.pop(key, None)
 
     result = {

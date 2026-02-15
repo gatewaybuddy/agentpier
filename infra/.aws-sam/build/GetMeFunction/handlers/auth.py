@@ -43,8 +43,15 @@ def register(event, context):
 
     table = _get_table()
 
-    # Check if agent name already exists (using GSI)
-    # For MVP, we'll do a simple check
+    # Check if agent name already exists
+    existing = table.query(
+        IndexName="GSI1",
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("GSI1PK").eq(f"AGENT_NAME#{agent_name.lower()}"),
+        Limit=1,
+    )
+    if existing.get("Items"):
+        return error("Agent name already taken", "name_taken", 409)
+
     import uuid
     user_id = uuid.uuid4().hex[:12]
     now = datetime.now(timezone.utc).isoformat()
