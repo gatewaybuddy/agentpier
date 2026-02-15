@@ -64,6 +64,20 @@ def create_listing(event, context):
     now = datetime.now(timezone.utc).isoformat()
     user_id = user["PK"].replace("USER#", "")
     
+    # Validate tags
+    tags = body.get("tags", [])
+    if not isinstance(tags, list):
+        return error("Tags must be an array", "invalid_tags")
+    if len(tags) > 10:
+        return error("Maximum 10 tags allowed", "too_many_tags")
+    clean_tags = []
+    for tag in tags:
+        if not isinstance(tag, str):
+            return error("Tags must be strings", "invalid_tags")
+        tag = tag.strip()[:30]  # Enforce 30 char max
+        if tag:
+            clean_tags.append(tag)
+
     location = body.get("location", {})
     state = location.get("state", "").upper()
     city = location.get("city", "").lower().replace(" ", "_")
@@ -87,7 +101,7 @@ def create_listing(event, context):
         "pricing": body.get("pricing", {}),
         "availability": body.get("availability", ""),
         "contact": body.get("contact", {}),
-        "tags": body.get("tags", []),
+        "tags": clean_tags,
         "posted_by": user_id,
         "agent_name": user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),

@@ -38,8 +38,8 @@ def register(event, context):
     description = body.get("description", "").strip()
     operator_email = body.get("operator_email", "").strip()
 
-    if not operator_email:
-        return error("operator_email is required", "missing_email")
+    if not operator_email or "@" not in operator_email or "." not in operator_email.split("@")[-1]:
+        return error("Valid operator_email is required", "invalid_email")
 
     table = _get_table()
 
