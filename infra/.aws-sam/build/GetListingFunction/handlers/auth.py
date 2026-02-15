@@ -3,6 +3,7 @@
 import json
 import os
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import boto3
 
@@ -62,10 +63,10 @@ def register(event, context):
         "description": description,
         "operator_email": operator_email,
         "human_verified": False,
-        "trust_score": 0.0,
+        "trust_score": Decimal("0.0"),
         "listings_count": 0,
         "transactions_completed": 0,
-        "dispute_rate": 0.0,
+        "dispute_rate": Decimal("0.0"),
         "created_at": now,
         "updated_at": now,
     }
@@ -118,3 +119,42 @@ def get_me(event, context):
     }
 
     return success(profile)
+
+
+def delete_account(event, context):
+    """DELETE /auth/me — Delete your account and all associated data."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    user = authenticate(event)
+    if not user:
+        record_auth_failure(event)
+        return unauthorized()
+
+    user_id = user.get("user_id")
+    table = _get_table()
+
+    # Find and delete all items for this user (listings, API keys, metadata)
+    response = table.query(
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("PK").eq(f"USER#{user_id}"),
+    )
+
+    with table.batch_writer() as batch:
+        for item in response.get("Items", []):
+            batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
+
+    # Also delete any listings by this user
+    # Listings use PK=LISTING#<id>, but have posted_by=user_id
+    # For MVP, scan with filter (fine at small scale)
+    listings = table.scan(
+        FilterExpression=boto3.dynamodb.conditions.Attr("posted_by").eq(user_id),
+    )
+    with table.batch_writer() as batch:
+        for item in listings.get("Items", []):
+            batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
+
+    return success({
+        "deleted": True,
+        "user_id": user_id,
+        "message": "Account and all associated data have been deleted."
+    })

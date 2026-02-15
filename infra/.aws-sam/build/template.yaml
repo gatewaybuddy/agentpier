@@ -180,6 +180,27 @@ Resources:
             Method: GET
     Metadata:
       SamResourceId: GetMeFunction
+  DeleteAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-delete-account-${Stage}
+      Handler: handlers.auth.delete_account
+      CodeUri: DeleteAccountFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /auth/me
+            Method: DELETE
+    Metadata:
+      SamResourceId: DeleteAccountFunction
   GetTrustFunction:
     Type: AWS::Serverless::Function
     Properties:

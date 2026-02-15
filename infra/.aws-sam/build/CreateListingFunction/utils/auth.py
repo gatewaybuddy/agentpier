@@ -32,8 +32,13 @@ def authenticate(event: dict) -> dict | None:
     Returns the user record if valid, None if not.
     """
     headers = event.get("headers", {}) or {}
-    # API Gateway lowercases headers
+    # Support both X-API-Key header and Authorization: Bearer
     api_key = headers.get("x-api-key") or headers.get("X-API-Key")
+    
+    if not api_key:
+        auth_header = headers.get("authorization") or headers.get("Authorization") or ""
+        if auth_header.startswith("Bearer "):
+            api_key = auth_header[7:]
     
     if not api_key:
         return None

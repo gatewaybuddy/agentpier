@@ -1,3 +1,4 @@
+from decimal import Decimal
 """Listing CRUD handlers for AgentPier."""
 
 import json
@@ -87,7 +88,7 @@ def create_listing(event, context):
         "posted_by": user_id,
         "agent_name": user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),
-        "trust_score": 0.0,
+        "trust_score": Decimal("0.0"),
         "status": "active",
         "created_at": now,
         "updated_at": now,
@@ -99,7 +100,7 @@ def create_listing(event, context):
     return success({
         "id": listing_id,
         "status": "active",
-        "trust_score": 0.0,
+        "trust_score": Decimal("0.0"),
         "created_at": now,
         "url": f"https://agentpier.io/listing/{listing_id}",
     }, 201)

@@ -160,6 +160,23 @@ Resources:
             Path: /auth/me
             Method: GET
 
+  DeleteAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-delete-account-${Stage}
+      Handler: handlers.auth.delete_account
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/me
+            Method: DELETE
+
   GetTrustFunction:
     Type: AWS::Serverless::Function
     Properties:

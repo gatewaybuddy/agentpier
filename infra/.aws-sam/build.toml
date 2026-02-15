@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "handlers.listings.create_listing"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["CreateListingFunction", "GetListingFunction", "SearchListingsFunction", "UpdateListingFunction", "DeleteListingFunction", "RegisterFunction", "GetMeFunction", "GetTrustFunction"]
+functions = ["CreateListingFunction", "GetListingFunction", "SearchListingsFunction", "UpdateListingFunction", "DeleteListingFunction", "RegisterFunction", "GetMeFunction", "DeleteAccountFunction", "GetTrustFunction"]
 
 [layer_build_definitions]
