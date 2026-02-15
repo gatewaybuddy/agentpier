@@ -160,6 +160,23 @@ Resources:
             Path: /auth/me
             Method: GET
 
+  RotateKeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-rotate-key-${Stage}
+      Handler: handlers.auth.rotate_key
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/rotate-key
+            Method: POST
+
   DeleteAccountFunction:
     Type: AWS::Serverless::Function
     Properties:

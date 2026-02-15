@@ -128,6 +128,51 @@ def get_me(event, context):
     return success(profile)
 
 
+def rotate_key(event, context):
+    """POST /auth/rotate-key — Invalidate current API key and issue a new one."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    user = authenticate(event)
+    if not user:
+        record_auth_failure(event)
+        return unauthorized()
+
+    user_id = user.get("user_id")
+    table = _get_table()
+
+    # Delete all existing API key records for this user
+    user_items = table.query(
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("PK").eq(f"USER#{user_id}"),
+    )
+    with table.batch_writer() as batch:
+        for item in user_items.get("Items", []):
+            if item["SK"].startswith("APIKEY#"):
+                batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
+
+    # Generate new key
+    now = datetime.now(timezone.utc).isoformat()
+    raw_key, key_hash = generate_api_key()
+
+    key_item = {
+        "PK": f"USER#{user_id}",
+        "SK": f"APIKEY#{key_hash[:16]}",
+        "GSI2PK": f"APIKEY#{key_hash}",
+        "GSI2SK": now,
+        "user_id": user_id,
+        "key_hash": key_hash,
+        "permissions": ["read", "write"],
+        "created_at": now,
+    }
+    table.put_item(Item=key_item)
+
+    return success({
+        "user_id": user_id,
+        "api_key": raw_key,
+        "message": "Key rotated. Your previous key is now invalid. Store this new key securely.",
+    })
+
+
 def delete_account(event, context):
     """DELETE /auth/me — Delete your account and all associated data."""
     if check_auth_failures(event):

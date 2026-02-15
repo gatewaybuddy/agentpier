@@ -11,8 +11,12 @@ from boto3.dynamodb.conditions import Key
 
 from utils.response import success, error, not_found, unauthorized
 from utils.auth import authenticate
+from utils.content_filter import check_listing_content, log_content_violation, get_user_violation_count
+from utils.rate_limit import get_client_ip
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
+
+FREE_LISTING_LIMIT = 3  # Free listings per account
 
 VALID_TYPES = {"service", "product", "agent_skill", "consulting"}
 VALID_CATEGORIES = {
@@ -78,6 +82,45 @@ def create_listing(event, context):
         if tag:
             clean_tags.append(tag)
 
+    # --- Content moderation ---
+    is_clean, flagged_categories = check_listing_content(title, description, clean_tags)
+    if not is_clean:
+        client_ip = get_client_ip(event)
+        log_content_violation(user_id, body, flagged_categories, client_ip)
+        
+        # Check for repeat offenders (3+ violations in 24h = suspended)
+        violation_count = get_user_violation_count(user_id)
+        if violation_count >= 3:
+            return error(
+                "Your account has been suspended due to repeated content policy violations. "
+                "Contact support if you believe this is an error.",
+                "account_suspended", 403
+            )
+        
+        return error(
+            "This listing violates AgentPier content policy. "
+            "Please revise your title, description, or tags and resubmit. "
+            "AgentPier is a business-focused marketplace — illegal, explicit, "
+            "exploitative, or fraudulent content is not permitted.",
+            "content_policy_violation"
+        )
+
+    # --- Listing limit check (3 free per account) ---
+    table = _get_table()
+    existing_listings = table.query(
+        IndexName="GSI2",
+        KeyConditionExpression=Key("GSI2PK").eq(f"AGENT#{user_id}"),
+        Select="COUNT",
+    )
+    current_count = existing_listings.get("Count", 0)
+    
+    if current_count >= FREE_LISTING_LIMIT:
+        return error(
+            f"Free listing limit reached ({FREE_LISTING_LIMIT}). "
+            "Upgrade your account to create additional listings.",
+            "listing_limit_reached", 402
+        )
+
     location = body.get("location", {})
     state = location.get("state", "").upper()
     city = location.get("city", "").lower().replace(" ", "_")
@@ -111,7 +154,6 @@ def create_listing(event, context):
         "updated_at": now,
     }
 
-    table = _get_table()
     table.put_item(Item=item)
 
     return success({
@@ -258,6 +300,21 @@ def update_listing(event, context):
     # Allowed update fields
     allowed = {"title", "description", "pricing", "availability", "contact", "tags", "status"}
     updates = {k: v for k, v in body.items() if k in allowed}
+
+    # Content filter on text field updates
+    check_title = updates.get("title", existing.get("title", ""))
+    check_desc = updates.get("description", existing.get("description", ""))
+    check_tags = updates.get("tags", existing.get("tags", []))
+    is_clean, flagged = check_listing_content(check_title, check_desc, check_tags)
+    if not is_clean:
+        client_ip = get_client_ip(event)
+        log_content_violation(user_id, {**updates, "listing_id": listing_id}, flagged, client_ip)
+        return error(
+            "This update violates AgentPier content policy. "
+            "Please revise your content and resubmit.",
+            "content_policy_violation"
+        )
+
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     # Build update expression
