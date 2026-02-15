@@ -30,7 +30,7 @@ Resources:
       Auth:
         DefaultAuthorizer: NONE
       Cors:
-        AllowOrigin: '''*'''
+        AllowOrigin: '''https://agentpier.org'''
         AllowMethods: '''GET,POST,PATCH,DELETE,OPTIONS'''
         AllowHeaders: '''Content-Type,X-API-Key'''
   CreateListingFunction:
