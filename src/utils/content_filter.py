@@ -7,11 +7,89 @@ Logs flagged attempts for review and potential reporting.
 import os
 import re
 import time
+import unicodedata
 from datetime import datetime, timezone
 
 import boto3
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
+
+
+# === Text normalization (anti-evasion) ===
+
+# Leetspeak substitution map
+_LEET_MAP = str.maketrans({
+    "@": "a",
+    "0": "o",
+    "1": "i",
+    "3": "e",
+    "$": "s",
+    "5": "s",
+    "!": "i",
+    "+": "t",
+    "7": "t",
+    "4": "a",
+})
+
+# Zero-width and invisible Unicode characters to strip
+_INVISIBLE_RE = re.compile(r"[\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad\u034f\u17b4\u17b5\u2028\u2029]+")
+
+# Spacing evasion: single chars separated by spaces, e.g. "E s c o r t"
+# Matches sequences of 3+ single letters each separated by whitespace
+_SPACED_LETTERS_RE = re.compile(r"(?<!\S)(\S)\s+(?=\S\s+\S(?:\s|$))(\S)\s+")
+
+
+def normalize_text(text: str) -> str:
+    """Normalize text to defeat common evasion techniques.
+    
+    1. Strip zero-width / invisible Unicode characters
+    2. Collapse spaced-out letters (e.g. "E s c o r t" → "Escort")
+    3. Apply leetspeak substitutions
+    4. Normalize Unicode (NFKD → strip accents → NFKC)
+    """
+    if not text:
+        return text
+    
+    # Strip invisible characters
+    text = _INVISIBLE_RE.sub("", text)
+    
+    # Collapse spaced-out single letters: "E s c o r t" → "Escort"
+    # Detect runs of single non-space chars separated by spaces
+    def _collapse_spaced(t: str) -> str:
+        words = t.split()
+        result = []
+        i = 0
+        while i < len(words):
+            # Look for a run of single-char "words"
+            if len(words[i]) == 1 and words[i].isalpha():
+                run = [words[i]]
+                j = i + 1
+                while j < len(words) and len(words[j]) == 1 and words[j].isalpha():
+                    run.append(words[j])
+                    j += 1
+                if len(run) >= 3:
+                    # Collapse the run into one word
+                    result.append("".join(run))
+                else:
+                    result.extend(run)
+                i = j
+            else:
+                result.append(words[i])
+                i += 1
+        return " ".join(result)
+    
+    text = _collapse_spaced(text)
+    
+    # Leetspeak substitutions
+    text = text.translate(_LEET_MAP)
+    
+    # Unicode normalization: decompose, strip combining marks, recompose
+    nfkd = unicodedata.normalize("NFKD", text)
+    stripped = "".join(c for c in nfkd if not unicodedata.combining(c))
+    text = unicodedata.normalize("NFKC", stripped)
+    
+    return text
+
 
 # === Category definitions ===
 # Each category has patterns that trigger a flag.
@@ -19,13 +97,15 @@ TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
 BLOCKED_CATEGORIES = {
     "illegal_drugs": [
-        r"\b(sell|buy|order|ship)\b.{0,30}\b(cocaine|heroin|fentanyl|meth|mdma|lsd|shrooms|psilocybin|ketamine|xanax|oxycontin|oxycodone|adderall)\b",
-        r"\b(drug\s*deal|narcotics|controlled\s*substance)\b",
+        r"\b(sell|buy|order|ship|deliver|get)\b.{0,30}\b(cocaine|heroin|fentanyl|meth|mdma|lsd|shrooms|psilocybin|ketamine|xanax|oxycontin|oxycodone|adderall|drugs?)\b",
+        r"\b(drugs?)\b.{0,30}\b(sell|buy|order|ship|deliver|online|fast|cheap|free|for\s*sale|deal\w*)\b",
+        r"\b(drugs?\s*deal|narcotics|controlled\s*substance)\b",
         r"\b(dark\s*web|darknet)\s*(market|shop|vendor)\b",
     ],
     "weapons": [
-        r"\b(sell|buy|order|ship)\b.{0,30}\b(gun|firearm|rifle|pistol|ammunition|ammo|explosive|grenade)\b",
-        r"\b(ghost\s*gun|3d\s*print\w*\s*gun|unregistered\s*(weapon|firearm))\b",
+        r"\b(sell|buy|order|ship|get)\b.{0,30}\b(guns?|firearms?|rifles?|pistols?|ammunition|ammo|explosives?|grenades?|weapons?)\b",
+        r"\b(guns?|weapons?|firearms?)\b.{0,30}\b(sell|buy|order|ship|online|cheap|for\s*sale|deal)\b",
+        r"\b(ghost\s*gun|3d\s*print\w*\s*gun|unregistered\s*(weapons?|firearms?))\b",
         r"\b(hit\s*man|assassin|murder\s*for\s*hire)\b",
     ],
     "stolen_data": [
@@ -50,7 +130,22 @@ BLOCKED_CATEGORIES = {
         r"\b(pump\s*and\s*dump|ponzi|pyramid\s*scheme)\b",
         r"\b(money\s*launder|wash\s*money|clean\s*money)\b",
         r"\b(wire\s*fraud|advance\s*fee|nigerian\s*prince)\b",
-        r"\b(fake\s*(id|passport|license|document|diploma))\b",
+        r"\b(fake|forged|counterfeit)\s*(ids?|passports?|licens\w*|documents?|diplomas?)\b",
+        r"\b(fraud\w*|scam)\s*(service|scheme|method)\b",
+    ],
+    "gambling": [
+        r"\b(online\s*gambling|internet\s*casino|virtual\s*casino)\b",
+        r"\b(casino|betting|wagering|sportsbook)\b.{0,30}\b(site|online|bonus|free|promo|sign\s*up|deposit)\b",
+        r"\b(slots?|poker|blackjack|roulette)\b.{0,30}\b(online|real\s*money|cash|win|payout|bonus)\b",
+        r"\b(bet|gamble|wager)\b.{0,20}\b(online|now|today|free|real\s*money)\b",
+    ],
+    "hate_speech": [
+        r"\b(white|black|race)\s*supremac\w*\b",
+        r"\b(hate\s*group|hate\s*movement|extremist\s*group)\b",
+        r"\b(racial\s*purity|ethnic\s*cleansing|race\s*war)\b",
+        r"\b(neo\s*nazi|white\s*power|white\s*nationalist)\b",
+        r"\b(extremist|radical)\s*(recruit\w*|training|cell|movement)\b",
+        r"\b(join|recruit)\b.{0,20}\b(supremac|extremist|hate\s*group|militia)\b",
     ],
     "prompt_injection": [
         r"(ignore\s*(previous|all|prior)\s*(instructions?|prompts?|rules?))",
@@ -70,6 +165,9 @@ BLOCKED_CATEGORIES = {
         r"\b(ddos|denial\s*of\s*service)\s*(attack|service|tool|for\s*hire)\b",
         r"\b(exploit\s*kit|zero\s*day|0day)\s*(for\s*sale|buy|sell)\b",
         r"\b(botnet|rat\s*tool|remote\s*access\s*trojan)\b",
+        r"\b(hack|crack|breach)\b.{0,20}\b(account|password|email|server|website|any)\b",
+        r"\b(hacking|cracking)\s*(service|tool|for\s*hire)\b",
+        r"\b(hack\s*for\s*hire|hacker\s*for\s*hire)\b",
     ],
 }
 
@@ -81,6 +179,8 @@ SEVERITY = {
     "exploitation": "critical",
     "sexually_explicit": "medium",
     "financial_scam": "high",
+    "gambling": "medium",
+    "hate_speech": "high",
     "prompt_injection": "medium",
     "impersonation": "medium",
     "malware": "high",
@@ -101,6 +201,8 @@ def check_content(text: str) -> tuple[bool, list[str]]:
     """
     if not text:
         return True, []
+    
+    text = normalize_text(text)
     
     flagged = []
     for category, patterns in _COMPILED.items():
