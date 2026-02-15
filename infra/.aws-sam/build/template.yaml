@@ -1,0 +1,265 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: "AgentPier \u2014 Agent-native marketplace"
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: AgentPierTable
+        STAGE:
+          Ref: Stage
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - prod
+Resources:
+  AgentPierApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name:
+        Fn::Sub: agentpier-api-${Stage}
+      StageName:
+        Ref: Stage
+      Auth:
+        DefaultAuthorizer: NONE
+      Cors:
+        AllowOrigin: '''*'''
+        AllowMethods: '''GET,POST,PATCH,DELETE,OPTIONS'''
+        AllowHeaders: '''Content-Type,X-API-Key'''
+  CreateListingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-create-listing-${Stage}
+      Handler: handlers.listings.create_listing
+      CodeUri: CreateListingFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /listings
+            Method: POST
+    Metadata:
+      SamResourceId: CreateListingFunction
+  GetListingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-listing-${Stage}
+      Handler: handlers.listings.get_listing
+      CodeUri: GetListingFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /listings/{id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetListingFunction
+  SearchListingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-search-listings-${Stage}
+      Handler: handlers.listings.search_listings
+      CodeUri: SearchListingsFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /listings
+            Method: GET
+    Metadata:
+      SamResourceId: SearchListingsFunction
+  UpdateListingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-update-listing-${Stage}
+      Handler: handlers.listings.update_listing
+      CodeUri: UpdateListingFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /listings/{id}
+            Method: PATCH
+    Metadata:
+      SamResourceId: UpdateListingFunction
+  DeleteListingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-delete-listing-${Stage}
+      Handler: handlers.listings.delete_listing
+      CodeUri: DeleteListingFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /listings/{id}
+            Method: DELETE
+    Metadata:
+      SamResourceId: DeleteListingFunction
+  RegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-register-${Stage}
+      Handler: handlers.auth.register
+      CodeUri: RegisterFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /auth/register
+            Method: POST
+    Metadata:
+      SamResourceId: RegisterFunction
+  GetMeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-me-${Stage}
+      Handler: handlers.auth.get_me
+      CodeUri: GetMeFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /auth/me
+            Method: GET
+    Metadata:
+      SamResourceId: GetMeFunction
+  GetTrustFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-trust-${Stage}
+      Handler: handlers.trust.get_trust
+      CodeUri: GetTrustFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /trust/{user_id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetTrustFunction
+  AgentPierTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: agentpier-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: PK
+        AttributeType: S
+      - AttributeName: SK
+        AttributeType: S
+      - AttributeName: GSI1PK
+        AttributeType: S
+      - AttributeName: GSI1SK
+        AttributeType: S
+      - AttributeName: GSI2PK
+        AttributeType: S
+      - AttributeName: GSI2SK
+        AttributeType: S
+      KeySchema:
+      - AttributeName: PK
+        KeyType: HASH
+      - AttributeName: SK
+        KeyType: RANGE
+      GlobalSecondaryIndexes:
+      - IndexName: GSI1
+        KeySchema:
+        - AttributeName: GSI1PK
+          KeyType: HASH
+        - AttributeName: GSI1SK
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      - IndexName: GSI2
+        KeySchema:
+        - AttributeName: GSI2PK
+          KeyType: HASH
+        - AttributeName: GSI2SK
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: agentpier-frontend-${Stage}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${AgentPierApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  TableName:
+    Description: DynamoDB table name
+    Value:
+      Ref: AgentPierTable
+  FrontendBucket:
+    Description: S3 bucket for static frontend
+    Value:
+      Ref: FrontendBucket
