@@ -46,3 +46,21 @@ def forbidden(message: str = "Access denied") -> dict:
 
 def rate_limited(message: str = "Rate limit exceeded") -> dict:
     return error(message, "rate_limited", 429)
+
+
+def too_many_requests(message: str = "Too many requests", retry_after: int = 60) -> dict:
+    """429 with Retry-After header."""
+    return {
+        "statusCode": 429,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Retry-After": str(retry_after),
+        },
+        "body": json.dumps({
+            "error": "rate_limited",
+            "message": message,
+            "status": 429,
+            "retry_after": retry_after,
+        }),
+    }

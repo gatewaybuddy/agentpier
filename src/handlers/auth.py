@@ -6,8 +6,9 @@ from datetime import datetime, timezone
 
 import boto3
 
-from utils.response import success, error, unauthorized
+from utils.response import success, error, unauthorized, too_many_requests
 from utils.auth import generate_api_key, authenticate
+from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -19,6 +20,11 @@ def _get_table():
 
 def register(event, context):
     """POST /auth/register — Register a new agent and get an API key."""
+    # Rate limit: 5 registrations per IP per hour
+    allowed, remaining, retry_after = check_rate_limit(event, "register", max_requests=5, window_seconds=3600)
+    if not allowed:
+        return too_many_requests("Registration rate limit exceeded", retry_after)
+
     try:
         body = json.loads(event.get("body", "{}"))
     except json.JSONDecodeError:
@@ -90,8 +96,13 @@ def register(event, context):
 
 def get_me(event, context):
     """GET /auth/me — Get current user profile."""
+    # Block IPs with too many auth failures
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
     user = authenticate(event)
     if not user:
+        record_auth_failure(event)
         return unauthorized()
 
     # Clean response
