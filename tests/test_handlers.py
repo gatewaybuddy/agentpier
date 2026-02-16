@@ -99,19 +99,30 @@ class TestCreateListing:
         assert resp["statusCode"] == 401
 
 
-class TestGetTrust:
-    def test_existing_user(self, dynamodb, sample_user):
-        from handlers.trust import get_trust
-        user_id, _ = sample_user
-        event = make_api_event(path_params={"user_id": user_id})
-        resp = get_trust(event, None)
-        assert resp["statusCode"] == 200
+class TestTrustRegister:
+    def test_register_agent(self, dynamodb):
+        from handlers.trust import trust_register
+        event = make_api_event(method="POST", body={
+            "agent_name": "test-agent",
+            "capabilities": ["undo", "sandbox"],
+            "declared_scope": "read_only",
+        })
+        resp = trust_register(event, None)
+        assert resp["statusCode"] == 201
         body = json.loads(resp["body"])
+        assert "agent_id" in body
         assert "trust_score" in body
-        assert "factors" in body
+        assert "trust_tier" in body
 
-    def test_nonexistent_user(self, dynamodb):
-        from handlers.trust import get_trust
-        event = make_api_event(path_params={"user_id": "nonexistent"})
-        resp = get_trust(event, None)
+    def test_register_missing_name(self, dynamodb):
+        from handlers.trust import trust_register
+        event = make_api_event(method="POST", body={})
+        resp = trust_register(event, None)
+        assert resp["statusCode"] == 400
+
+class TestTrustQuery:
+    def test_nonexistent_agent(self, dynamodb):
+        from handlers.trust import trust_query
+        event = make_api_event(path_params={"agent_id": "nonexistent"})
+        resp = trust_query(event, None)
         assert resp["statusCode"] == 404

@@ -156,8 +156,8 @@ BLOCKED_CATEGORIES = {
         r"(disregard\s*(safety|content\s*policy|guidelines))",
     ],
     "impersonation": [
-        r"\b(fake|forged|counterfeit)\s*(review|rating|credential|certification)\b",
-        r"\b(buy|sell|boost)\s*(review|rating|follower|like|upvote)\b",
+        r"\b(fake|forged|counterfeit)\s*(reviews?|ratings?|credentials?|certifications?)\b",
+        r"\b(buy|sell|boost)\s*(reviews?|ratings?|followers?|likes?|upvotes?)\b",
         r"\b(impersonat|pretend\s*to\s*be|pose\s*as)\b",
     ],
     "malware": [
@@ -214,14 +214,37 @@ def check_content(text: str) -> tuple[bool, list[str]]:
     return len(flagged) == 0, flagged
 
 
+_BARE_TAG_BLOCKLIST = re.compile(
+    r"^(cocaine|heroin|fentanyl|meth|mdma|lsd|shrooms|psilocybin|ketamine|"
+    r"xanax|oxycontin|oxycodone|adderall|"
+    r"guns?|firearms?|ammunition|ammo|explosives?|grenades?|weapons?|"
+    r"csam|porn|pornograph|xxx|"
+    r"fraud|scam|counterfeit|"
+    r"hitman|assassin)$",
+    re.IGNORECASE,
+)
+
+
 def check_listing_content(title: str, description: str, tags: list[str] = None) -> tuple[bool, list[str]]:
     """Check all text fields of a listing.
     
     Returns:
         (is_clean, flagged_categories)
+    Tags are checked both in combined context AND individually against
+    a bare-keyword blocklist (since tags lack surrounding context).
     """
     combined = f"{title} {description} {' '.join(tags or [])}"
-    return check_content(combined)
+    is_clean, flagged = check_content(combined)
+    
+    # Also check each tag individually against bare blocklist
+    for tag in (tags or []):
+        normalized_tag = normalize_text(tag).strip()
+        if _BARE_TAG_BLOCKLIST.match(normalized_tag):
+            if "blocked_tag" not in flagged:
+                flagged.append("blocked_tag")
+            is_clean = False
+    
+    return is_clean, flagged
 
 
 def log_content_violation(user_id: str, listing_data: dict, categories: list[str], client_ip: str = "unknown"):

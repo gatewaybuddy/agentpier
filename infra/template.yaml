@@ -194,11 +194,49 @@ Resources:
             Path: /auth/me
             Method: DELETE
 
-  GetTrustFunction:
+  # ============================================
+  # Trust API (ACE-T)
+  # ============================================
+
+  TrustRegisterFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub agentpier-get-trust-${Stage}
-      Handler: handlers.trust.get_trust
+      FunctionName: !Sub agentpier-trust-register-${Stage}
+      Handler: handlers.trust.trust_register
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/agents
+            Method: POST
+
+  TrustReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-trust-report-${Stage}
+      Handler: handlers.trust.trust_report
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/agents/{agent_id}/events
+            Method: POST
+
+  TrustQueryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-trust-query-${Stage}
+      Handler: handlers.trust.trust_query
       CodeUri: ../src/
       Policies:
         - DynamoDBReadPolicy:
@@ -208,7 +246,24 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref AgentPierApi
-            Path: /trust/{user_id}
+            Path: /trust/agents/{agent_id}
+            Method: GET
+
+  TrustSearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-trust-search-${Stage}
+      Handler: handlers.trust.trust_search
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/agents
             Method: GET
 
   # ============================================
