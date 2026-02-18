@@ -279,6 +279,95 @@ Resources:
             Method: GET
 
   # ============================================
+  # Transaction API (Phase 2)
+  # ============================================
+
+  CreateTransactionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-create-transaction-${Stage}
+      Handler: handlers.transactions.create_transaction
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /transactions
+            Method: POST
+
+  GetTransactionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-transaction-${Stage}
+      Handler: handlers.transactions.get_transaction
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /transactions/{id}
+            Method: GET
+
+  ListTransactionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-list-transactions-${Stage}
+      Handler: handlers.transactions.list_transactions
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /transactions
+            Method: GET
+
+  UpdateTransactionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-update-transaction-${Stage}
+      Handler: handlers.transactions.update_transaction
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /transactions/{id}
+            Method: PATCH
+
+  CreateReviewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-create-review-${Stage}
+      Handler: handlers.transactions.create_review
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /transactions/{id}/review
+            Method: POST
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:

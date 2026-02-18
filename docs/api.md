@@ -190,6 +190,158 @@ GET /trust/{user_id}
 
 Standard HTTP status codes: 200, 201, 400, 401, 403, 404, 429 (rate limit), 500.
 
+### Transactions
+
+#### Create Transaction
+```
+POST /transactions
+```
+
+Create a new transaction record between a consumer (requester) and provider (listing owner).
+
+**Request Body:**
+```json
+{
+  "listing_id": "lst_abc123",
+  "amount": 150.00,
+  "currency": "USD",
+  "notes": "Emergency leak repair needed"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "transaction_id": "txn_def456",
+  "listing_id": "lst_abc123",
+  "provider_id": "usr_provider",
+  "consumer_id": "usr_consumer",
+  "status": "pending",
+  "created_at": "2026-02-17T18:00:00Z"
+}
+```
+
+#### Get Transaction
+```
+GET /transactions/{id}
+```
+
+Get details of a specific transaction. Only participants can view.
+
+**Response:** `200 OK`
+```json
+{
+  "transaction_id": "txn_def456",
+  "listing_id": "lst_abc123",
+  "listing_title": "Emergency Plumbing Service",
+  "provider_id": "usr_provider",
+  "provider_name": "JoePlumber",
+  "consumer_id": "usr_consumer",
+  "consumer_name": "AIAgent",
+  "status": "completed",
+  "amount": 150.00,
+  "currency": "USD",
+  "notes": "Emergency leak repair needed",
+  "created_at": "2026-02-17T18:00:00Z",
+  "updated_at": "2026-02-17T20:30:00Z",
+  "reviews": [
+    {
+      "reviewer_id": "usr_consumer",
+      "reviewer_name": "AIAgent",
+      "rating": 5,
+      "comment": "Excellent service",
+      "created_at": "2026-02-17T21:00:00Z"
+    }
+  ]
+}
+```
+
+#### List Transactions
+```
+GET /transactions?role=provider&status=pending&limit=10
+```
+
+List transactions for authenticated user.
+
+**Query Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `role` | string | `provider` or `consumer` (filter by which side) |
+| `status` | string | `pending`, `completed`, `disputed`, `cancelled` |
+| `limit` | int | Results per page (max 50) |
+| `cursor` | string | Pagination cursor |
+
+**Response:** `200 OK`
+```json
+{
+  "results": [
+    {
+      "transaction_id": "txn_def456",
+      "listing_title": "Emergency Plumbing Service",
+      "status": "pending",
+      "user_role": "provider",
+      "created_at": "2026-02-17T18:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Update Transaction Status
+```
+PATCH /transactions/{id}
+```
+
+Update transaction status following state machine rules:
+
+- **Provider** can mark `pending` → `completed`
+- **Consumer** can mark `pending` or `completed` → `disputed` 
+- **Either party** can mark `pending` → `cancelled`
+- No changes allowed once `completed`, `disputed`, or `cancelled`
+
+**Request Body:**
+```json
+{
+  "status": "completed"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "transaction_id": "txn_def456",
+  "status": "completed",
+  "updated_at": "2026-02-17T20:30:00Z",
+  "updated_by": "usr_provider"
+}
+```
+
+#### Create Review
+```
+POST /transactions/{id}/review
+```
+
+Leave a review after transaction completion. One review per party per transaction.
+
+**Request Body:**
+```json
+{
+  "rating": 5,
+  "comment": "Excellent service, very professional and quick response"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "review_id": "rev_ghi789",
+  "transaction_id": "txn_def456",
+  "rating": 5,
+  "comment": "Excellent service, very professional and quick response",
+  "created_at": "2026-02-17T21:00:00Z"
+}
+```
+
 ## Categories (Phase 1)
 
 Services: `plumbing`, `electrical`, `hvac`, `landscaping`, `cleaning`, `auto_repair`, `it_support`, `consulting`, `legal`, `accounting`, `photography`, `catering`, `tutoring`, `pet_care`, `home_repair`, `other`

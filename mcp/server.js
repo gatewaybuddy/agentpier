@@ -237,6 +237,227 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: "register_agent",
+    description: "Register a new agent identity in the ACE-T trust system. Returns the agent's ID, initial trust score, and tier. Use this before reporting events or querying trust for a new agent.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent_name: {
+          type: "string",
+          description: "Display name for the agent (required)",
+        },
+        capabilities: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of capabilities the agent declares (e.g., ['code_execution', 'web_search'])",
+        },
+        declared_scope: {
+          type: "string",
+          description: "The scope of actions this agent is authorized for",
+        },
+        contact_url: {
+          type: "string",
+          description: "URL to contact or interact with this agent",
+        },
+        description: {
+          type: "string",
+          description: "Brief description of the agent's purpose",
+        },
+      },
+      required: ["agent_name"],
+    },
+  },
+  {
+    name: "report_event",
+    description: "Report a trust event (execution outcome) for a registered agent. Events affect the agent's ACE-T trust score. Use after an agent completes a task to record success, failure, safety violations, or timeouts.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent_id: {
+          type: "string",
+          description: "ID of the agent to report an event for",
+        },
+        event_type: {
+          type: "string",
+          description: "Type of event",
+          enum: ["success", "failure", "safety_violation", "timeout"],
+        },
+        reporter_id: {
+          type: "string",
+          description: "ID of the agent or system reporting this event",
+        },
+        outcome_details: {
+          type: "string",
+          description: "Free-text details about the outcome",
+        },
+        reversibility_observed: {
+          type: "boolean",
+          description: "Whether the action was observed to be reversible",
+        },
+        blast_radius_observed: {
+          type: "string",
+          description: "Observed blast radius of the action (e.g., 'local', 'global')",
+        },
+      },
+      required: ["agent_id", "event_type"],
+    },
+  },
+  {
+    name: "query_trust",
+    description: "Query an agent's full ACE-T trust profile including score, tier, axis breakdown, weights, and event history. Use to evaluate whether an agent should be trusted for a given task.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        agent_id: {
+          type: "string",
+          description: "ID of the agent to query",
+        },
+      },
+      required: ["agent_id"],
+    },
+  },
+  {
+    name: "search_agents",
+    description: "Search and list agents registered in the ACE-T trust system. Filter by minimum/maximum trust score, trust tier, or capability. Use to discover trustworthy agents for collaboration.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        min_score: {
+          type: "number",
+          description: "Minimum trust score (0.0 - 1.0)",
+        },
+        max_score: {
+          type: "number",
+          description: "Maximum trust score (0.0 - 1.0)",
+        },
+        tier: {
+          type: "string",
+          description: "Filter by trust tier",
+          enum: ["untrusted", "provisional", "trusted", "established"],
+        },
+        capability: {
+          type: "string",
+          description: "Filter by a specific capability",
+        },
+        limit: {
+          type: "number",
+          description: "Max results (1-100, default 20)",
+        },
+      },
+    },
+  },
+  {
+    name: "create_transaction",
+    description: "Create a transaction record for a listing. This records that an agent intends to do business with a listing provider, starting the transaction lifecycle that feeds the trust model.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        listing_id: {
+          type: "string",
+          description: "ID of the listing to create a transaction for",
+        },
+        amount: {
+          type: "number",
+          description: "Transaction amount (optional)",
+        },
+        currency: {
+          type: "string",
+          description: "Currency code (default: USD)",
+          default: "USD",
+        },
+        notes: {
+          type: "string",
+          description: "Additional notes about the transaction",
+        },
+      },
+      required: ["listing_id"],
+    },
+  },
+  {
+    name: "get_transaction",
+    description: "Get details of a specific transaction. Only participants (provider and consumer) can view transaction details.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        transaction_id: {
+          type: "string",
+          description: "Transaction ID to retrieve",
+        },
+      },
+      required: ["transaction_id"],
+    },
+  },
+  {
+    name: "list_transactions",
+    description: "List transactions for the authenticated user. Filter by role (provider/consumer) and status. Shows transactions where you are either the provider (listing owner) or consumer (requester).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        role: {
+          type: "string",
+          description: "Filter by role in transaction",
+          enum: ["provider", "consumer"],
+        },
+        status: {
+          type: "string",
+          description: "Filter by transaction status",
+          enum: ["pending", "completed", "disputed", "cancelled"],
+        },
+        limit: {
+          type: "number",
+          description: "Max results to return (1-50, default 20)",
+        },
+        cursor: {
+          type: "string",
+          description: "Pagination cursor for additional results",
+        },
+      },
+    },
+  },
+  {
+    name: "update_transaction",
+    description: "Update transaction status. Provider can mark as completed, consumer can dispute, either party can cancel pending transactions. State transitions feed the trust scoring system.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        transaction_id: {
+          type: "string",
+          description: "Transaction ID to update",
+        },
+        status: {
+          type: "string",
+          description: "New status for the transaction",
+          enum: ["completed", "disputed", "cancelled"],
+        },
+      },
+      required: ["transaction_id", "status"],
+    },
+  },
+  {
+    name: "review_transaction",
+    description: "Leave a review after transaction completion. Rating (1-5) and optional comment. Reviews create trust events that affect both parties' trust scores. Only allowed on completed transactions, one review per party.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        transaction_id: {
+          type: "string",
+          description: "Transaction ID to review",
+        },
+        rating: {
+          type: "number",
+          description: "Rating from 1-5 (1=very poor, 5=excellent)",
+          minimum: 1,
+          maximum: 5,
+        },
+        comment: {
+          type: "string",
+          description: "Optional comment about the transaction (max 1000 chars)",
+        },
+      },
+      required: ["transaction_id", "rating"],
+    },
+  },
 ];
 
 // --- Tool Handlers ---
@@ -291,6 +512,70 @@ async function handleTool(name, args) {
 
     case "rotate_key":
       return apiCall("POST", "/auth/rotate-key");
+
+    case "register_agent":
+      return apiCall("POST", "/trust/agents", {
+        agent_name: args.agent_name,
+        capabilities: args.capabilities || [],
+        declared_scope: args.declared_scope || "",
+        contact_url: args.contact_url || "",
+        description: args.description || "",
+      });
+
+    case "report_event":
+      return apiCall("POST", `/trust/agents/${args.agent_id}/events`, {
+        event_type: args.event_type,
+        reporter_id: args.reporter_id || "",
+        outcome_details: args.outcome_details || "",
+        reversibility_observed: args.reversibility_observed,
+        blast_radius_observed: args.blast_radius_observed || "",
+      });
+
+    case "query_trust":
+      return apiCall("GET", `/trust/agents/${args.agent_id}`);
+
+    case "search_agents": {
+      const params = new URLSearchParams();
+      if (args.min_score != null) params.set("min_score", String(args.min_score));
+      if (args.max_score != null) params.set("max_score", String(args.max_score));
+      if (args.tier) params.set("tier", args.tier);
+      if (args.capability) params.set("capability", args.capability);
+      if (args.limit) params.set("limit", String(args.limit));
+      const qs = params.toString();
+      return apiCall("GET", `/trust/agents${qs ? `?${qs}` : ""}`);
+    }
+
+    case "create_transaction":
+      return apiCall("POST", "/transactions", {
+        listing_id: args.listing_id,
+        amount: args.amount,
+        currency: args.currency || "USD",
+        notes: args.notes || "",
+      });
+
+    case "get_transaction":
+      return apiCall("GET", `/transactions/${args.transaction_id}`);
+
+    case "list_transactions": {
+      const params = new URLSearchParams();
+      if (args.role) params.set("role", args.role);
+      if (args.status) params.set("status", args.status);
+      if (args.limit) params.set("limit", String(args.limit));
+      if (args.cursor) params.set("cursor", args.cursor);
+      const qs = params.toString();
+      return apiCall("GET", `/transactions${qs ? `?${qs}` : ""}`);
+    }
+
+    case "update_transaction":
+      return apiCall("PATCH", `/transactions/${args.transaction_id}`, {
+        status: args.status,
+      });
+
+    case "review_transaction":
+      return apiCall("POST", `/transactions/${args.transaction_id}/review`, {
+        rating: args.rating,
+        comment: args.comment || "",
+      });
 
     default:
       throw new Error(`Unknown tool: ${name}`);
