@@ -186,23 +186,77 @@ def delete_account(event, context):
     user_id = user.get("user_id")
     table = _get_table()
 
-    # Find and delete all items for this user (listings, API keys, metadata)
-    response = table.query(
-        KeyConditionExpression=boto3.dynamodb.conditions.Key("PK").eq(f"USER#{user_id}"),
-    )
-
+    # Delete all records for this user with pagination
+    items_to_delete = []
+    
+    # 1. Delete USER# records (API keys, metadata)
+    last_key = None
+    while True:
+        query_kwargs = {
+            "KeyConditionExpression": boto3.dynamodb.conditions.Key("PK").eq(f"USER#{user_id}")
+        }
+        if last_key:
+            query_kwargs["ExclusiveStartKey"] = last_key
+            
+        response = table.query(**query_kwargs)
+        items_to_delete.extend(response.get("Items", []))
+        
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            break
+    
+    # 2. Delete TRUST# records
+    last_key = None
+    while True:
+        query_kwargs = {
+            "KeyConditionExpression": boto3.dynamodb.conditions.Key("PK").eq(f"TRUST#{user_id}")
+        }
+        if last_key:
+            query_kwargs["ExclusiveStartKey"] = last_key
+            
+        response = table.query(**query_kwargs)
+        items_to_delete.extend(response.get("Items", []))
+        
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            break
+    
+    # 3. Delete ABUSE# records 
+    last_key = None
+    while True:
+        query_kwargs = {
+            "KeyConditionExpression": boto3.dynamodb.conditions.Key("PK").eq(f"ABUSE#{user_id}")
+        }
+        if last_key:
+            query_kwargs["ExclusiveStartKey"] = last_key
+            
+        response = table.query(**query_kwargs)
+        items_to_delete.extend(response.get("Items", []))
+        
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            break
+    
+    # 4. Delete listings using GSI2 (more efficient than table scan)
+    last_key = None
+    while True:
+        query_kwargs = {
+            "IndexName": "GSI2",
+            "KeyConditionExpression": boto3.dynamodb.conditions.Key("GSI2PK").eq(f"AGENT#{user_id}")
+        }
+        if last_key:
+            query_kwargs["ExclusiveStartKey"] = last_key
+            
+        response = table.query(**query_kwargs)
+        items_to_delete.extend(response.get("Items", []))
+        
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            break
+    
+    # Batch delete all items (DynamoDB batch_writer handles the 25-item limit automatically)
     with table.batch_writer() as batch:
-        for item in response.get("Items", []):
-            batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
-
-    # Also delete any listings by this user
-    # Listings use PK=LISTING#<id>, but have posted_by=user_id
-    # For MVP, scan with filter (fine at small scale)
-    listings = table.scan(
-        FilterExpression=boto3.dynamodb.conditions.Attr("posted_by").eq(user_id),
-    )
-    with table.batch_writer() as batch:
-        for item in listings.get("Items", []):
+        for item in items_to_delete:
             batch.delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
 
     return success({
