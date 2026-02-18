@@ -21,10 +21,9 @@ FREE_LISTING_LIMIT = 3  # Free listings per account
 
 VALID_TYPES = {"service", "product", "agent_skill", "consulting"}
 VALID_CATEGORIES = {
-    "plumbing", "electrical", "hvac", "landscaping", "cleaning",
-    "auto_repair", "it_support", "consulting", "legal", "accounting",
-    "photography", "catering", "tutoring", "pet_care", "home_repair",
-    "other",
+    "code_review", "research", "automation", "monitoring", "content_creation",
+    "security", "infrastructure", "data_processing", "translation", "trading",
+    "consulting", "design", "testing", "devops", "other",
 }
 
 

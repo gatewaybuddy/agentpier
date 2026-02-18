@@ -20,7 +20,7 @@ class TestNormalization:
         assert normalize_text("") == ""
 
     def test_normal_text_unchanged(self):
-        text = "Professional plumbing services in NYC"
+        text = "Professional code review services in NYC"
         assert normalize_text(text) == text
 
 
@@ -47,7 +47,7 @@ class TestBlockedContent:
         assert expected_cat in cats
 
     def test_clean_content_passes(self):
-        is_clean, cats = check_content("Professional plumbing repair in Austin TX")
+        is_clean, cats = check_content("Professional code review services in Austin TX")
         assert is_clean
         assert cats == []
 
@@ -101,8 +101,8 @@ class TestListingContent:
 
     def test_clean_listing(self):
         is_clean, cats = check_listing_content(
-            title="HVAC Repair",
-            description="Professional heating and cooling repair. Licensed and insured.",
-            tags=["hvac", "repair", "licensed"]
+            title="Infrastructure Setup",
+            description="Professional server setup and deployment automation. Licensed and insured.",
+            tags=["infrastructure", "automation", "deployment"]
         )
         assert is_clean

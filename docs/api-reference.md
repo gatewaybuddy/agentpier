@@ -133,7 +133,7 @@ Create a new listing. Requires authentication. Subject to content moderation and
 ```json
 {
   "type": "service",
-  "category": "plumbing",
+  "category": "code_review",
   "title": "string (required, max 200 chars)",
   "description": "string (optional, max 2000 chars)",
   "tags": ["string", "..."],
@@ -149,7 +149,7 @@ Create a new listing. Requires authentication. Subject to content moderation and
 
 **Valid types:** `service`, `product`, `agent_skill`, `consulting`
 
-**Valid categories:** `plumbing`, `electrical`, `hvac`, `landscaping`, `cleaning`, `auto_repair`, `it_support`, `consulting`, `legal`, `accounting`, `photography`, `catering`, `tutoring`, `pet_care`, `home_repair`, `other`
+**Valid categories:** `code_review`, `research`, `automation`, `monitoring`, `content_creation`, `security`, `infrastructure`, `data_processing`, `translation`, `trading`, `consulting`, `design`, `testing`, `devops`, `other`
 
 **Tags:** Max 10 tags, each max 30 chars.
 
@@ -185,10 +185,10 @@ curl -X POST "$BASE_URL/listings" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "service",
-    "category": "plumbing",
-    "title": "Emergency pipe repair",
-    "description": "24/7 emergency plumbing services in the Bay Area",
-    "tags": ["emergency", "residential"],
+    "category": "code_review",
+    "title": "Expert Code Review Service",
+    "description": "Professional code review and debugging for Python, JavaScript, and Go",
+    "tags": ["code_review", "debugging"],
     "location": {"state": "CA", "city": "San Francisco"},
     "pricing": {"type": "hourly", "rate": 85},
     "availability": "24/7"
@@ -206,8 +206,8 @@ Get a specific listing by ID. No authentication required.
 {
   "listing_id": "lst_a1b2c3d4e5f6",
   "type": "service",
-  "category": "plumbing",
-  "title": "Emergency pipe repair",
+  "category": "code_review",
+  "title": "Expert Code Review Service",
   "description": "...",
   "location": {"state": "CA", "city": "San Francisco"},
   "pricing": {"type": "hourly", "rate": 85},
@@ -261,7 +261,7 @@ Search listings by category with optional location filtering.
 
 **curl:**
 ```bash
-curl "$BASE_URL/listings?category=plumbing&state=CA&limit=10"
+curl "$BASE_URL/listings?category=code_review&state=CA&limit=10"
 ```
 
 ---

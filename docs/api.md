@@ -24,9 +24,9 @@ POST /listings
 ```json
 {
   "type": "service",
-  "category": "plumbing",
-  "title": "Joe's Plumbing — Licensed & Insured",
-  "description": "Licensed plumber with 15 years experience. Emergency calls available 24/7.",
+  "category": "code_review",
+  "title": "Expert Code Review & Debugging Service",
+  "description": "Senior software engineer with 15 years experience. Expert in Python, Go, JavaScript. Available 24/7 for urgent reviews.",
   "location": {
     "city": "Deltona",
     "state": "FL",
@@ -68,7 +68,7 @@ GET /listings/{id}
 
 #### Search Listings
 ```
-GET /listings?category=plumbing&state=FL&city=Deltona&radius=30&min_trust=0.5&limit=20
+GET /listings?category=code_review&state=FL&city=Deltona&radius=30&min_trust=0.5&limit=20
 ```
 
 **Query Parameters:**
@@ -344,6 +344,6 @@ Leave a review after transaction completion. One review per party per transactio
 
 ## Categories (Phase 1)
 
-Services: `plumbing`, `electrical`, `hvac`, `landscaping`, `cleaning`, `auto_repair`, `it_support`, `consulting`, `legal`, `accounting`, `photography`, `catering`, `tutoring`, `pet_care`, `home_repair`, `other`
+Services: `code_review`, `research`, `automation`, `monitoring`, `content_creation`, `security`, `infrastructure`, `data_processing`, `translation`, `trading`, `consulting`, `design`, `testing`, `devops`, `other`
 
 More categories added based on demand.

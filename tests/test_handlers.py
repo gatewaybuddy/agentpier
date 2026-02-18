@@ -64,11 +64,11 @@ class TestCreateListing:
             method="POST",
             api_key=raw_key,
             body={
-                "title": "Plumbing Repair",
-                "description": "Licensed plumber in Austin",
-                "category": "plumbing",
+                "title": "Code Review Service",
+                "description": "Expert code review and debugging for Python applications",
+                "category": "code_review",
                 "type": "service",
-                "tags": ["plumbing", "repair"],
+                "tags": ["code_review", "debugging"],
             },
         )
         resp = create_listing(event, None)
