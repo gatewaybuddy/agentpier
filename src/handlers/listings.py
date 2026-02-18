@@ -157,6 +157,13 @@ def create_listing(event, context):
 
     table.put_item(Item=item)
 
+    # Update user's listing_count
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression="ADD listing_count :inc",
+        ExpressionAttributeValues={":inc": 1}
+    )
+
     return success({
         "id": listing_id,
         "status": "active",
@@ -360,6 +367,13 @@ def delete_listing(event, context):
 
     table.delete_item(
         Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
+    )
+
+    # Update user's listing_count
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression="ADD listing_count :dec",
+        ExpressionAttributeValues={":dec": -1}
     )
 
     return success({"id": listing_id, "deleted": True})
