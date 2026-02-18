@@ -51,8 +51,16 @@ def not_found(message: str = "Resource not found") -> dict:
     return error(message, "not_found", 404)
 
 
-def unauthorized(message: str = "API key required") -> dict:
+def unauthorized(message: str = "Invalid or missing API key. Register at POST /auth/register to get your API key.") -> dict:
     return error(message, "unauthorized", 401)
+
+
+def missing_auth(message: str = "API key required. Add 'x-api-key' header with your API key from POST /auth/register.") -> dict:
+    return error(message, "missing_auth", 401)
+
+
+def invalid_auth(message: str = "Invalid API key. Check your key or register a new account at POST /auth/register.") -> dict:
+    return error(message, "invalid_auth", 401)
 
 
 def forbidden(message: str = "Access denied") -> dict:
