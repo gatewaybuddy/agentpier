@@ -237,6 +237,7 @@ const TOOLS = [
       properties: {},
     },
   },
+""
   {
     name: "create_transaction",
     description: "Create a transaction record for a listing. This records that an agent intends to do business with a listing provider, starting the transaction lifecycle that feeds the trust model.",
@@ -402,6 +403,38 @@ async function handleTool(name, args) {
 
     case "rotate_key":
       return apiCall("POST", "/auth/rotate-key");
+
+    case "register_agent":
+      return apiCall("POST", "/trust/agents", {
+        agent_name: args.agent_name,
+        capabilities: args.capabilities || [],
+        declared_scope: args.declared_scope || "",
+        contact_url: args.contact_url || "",
+        description: args.description || "",
+      });
+
+    case "report_event":
+      return apiCall("POST", `/trust/agents/${args.agent_id}/events`, {
+        event_type: args.event_type,
+        reporter_id: args.reporter_id || "",
+        outcome_details: args.outcome_details || "",
+        reversibility_observed: args.reversibility_observed,
+        blast_radius_observed: args.blast_radius_observed || "",
+      });
+
+    case "query_trust":
+      return apiCall("GET", `/trust/agents/${args.agent_id}`);
+
+    case "search_agents": {
+      const params = new URLSearchParams();
+      if (args.min_score != null) params.set("min_score", String(args.min_score));
+      if (args.max_score != null) params.set("max_score", String(args.max_score));
+      if (args.tier) params.set("tier", args.tier);
+      if (args.capability) params.set("capability", args.capability);
+      if (args.limit) params.set("limit", String(args.limit));
+      const qs = params.toString();
+      return apiCall("GET", `/trust/agents${qs ? `?${qs}` : ""}`);
+    }
 
     case "create_transaction":
       return apiCall("POST", "/transactions", {
