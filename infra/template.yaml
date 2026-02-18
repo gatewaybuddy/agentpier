@@ -11,6 +11,7 @@ Globals:
       Variables:
         TABLE_NAME: !Ref AgentPierTable
         STAGE: !Ref Stage
+        CURSOR_SECRET: !Ref CursorSecret
 
 Parameters:
   Stage:
@@ -19,6 +20,14 @@ Parameters:
     AllowedValues:
       - dev
       - prod
+  CursorSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret key for HMAC signing of pagination cursors
+    MinLength: 32
+
+Conditions:
+  IsProduction: !Equals [!Ref Stage, prod]
 
 Resources:
 
@@ -33,9 +42,12 @@ Resources:
       Auth:
         DefaultAuthorizer: NONE
       Cors:
-        AllowOrigin: "'https://agentpier.org'"
+        AllowOrigin: !If 
+          - IsProduction
+          - "'https://agentpier.org'"
+          - "'https://agentpier.org,http://localhost:3000,http://localhost:8080'"
         AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-API-Key'"
+        AllowHeaders: "'Content-Type,X-API-Key,Authorization'"
 
   # ============================================
   # Lambda Functions

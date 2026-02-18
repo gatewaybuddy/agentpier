@@ -1,16 +1,27 @@
 """Standard API response helpers."""
 
 import json
+import os
 from typing import Any
 
-ALLOWED_ORIGIN = "https://agentpier.org"
+# Determine allowed origins based on stage
+STAGE = os.environ.get("STAGE", "dev")
+if STAGE == "prod":
+    ALLOWED_ORIGINS = ["https://agentpier.org"]
+else:
+    ALLOWED_ORIGINS = ["https://agentpier.org", "http://localhost:3000", "http://localhost:8080"]
 
 
-def _cors_headers() -> dict:
+def _cors_headers(origin: str = None) -> dict:
     """Common CORS headers."""
+    # If origin is provided and in allowed list, use it; otherwise use first allowed origin
+    allowed_origin = ALLOWED_ORIGINS[0]  # Default to first
+    if origin and origin in ALLOWED_ORIGINS:
+        allowed_origin = origin
+    
     return {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+        "Access-Control-Allow-Origin": allowed_origin,
     }
 
 
