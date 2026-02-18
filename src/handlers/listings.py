@@ -192,6 +192,10 @@ def get_listing(event, context):
     # Strip internal fields from response
     for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
         item.pop(key, None)
+    
+    # Convert Decimal trust_score to float
+    if "trust_score" in item:
+        item["trust_score"] = float(item["trust_score"])
 
     return success(item)
 
@@ -253,10 +257,13 @@ def search_listings(event, context):
     if min_trust > 0:
         items = [i for i in items if float(i.get("trust_score", 0)) >= min_trust]
 
-    # Clean up internal fields
+    # Clean up internal fields and ensure trust_score is numeric
     for item in items:
         for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
             item.pop(key, None)
+        # Convert Decimal trust_score to float
+        if "trust_score" in item:
+            item["trust_score"] = float(item["trust_score"])
 
     result = {
         "results": items,
