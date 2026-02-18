@@ -13,6 +13,7 @@ from utils.response import success, error, not_found, unauthorized
 from utils.auth import authenticate
 from utils.content_filter import check_listing_content, log_content_violation, get_user_violation_count
 from utils.rate_limit import get_client_ip
+from utils.pagination import sign_cursor, verify_cursor
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -227,18 +228,16 @@ def search_listings(event, context):
     }
 
     if cursor:
-        import base64
-        try:
-            decoded = json.loads(base64.b64decode(cursor).decode())
-            # Validate cursor has expected GSI1 keys only
-            if not isinstance(decoded, dict) or "GSI1PK" not in decoded:
-                return error("Invalid pagination cursor", "invalid_cursor")
-            # Only allow keys that belong to the queried category
-            if decoded.get("GSI1PK") != category:
-                return error("Invalid pagination cursor", "invalid_cursor")
-            query_kwargs["ExclusiveStartKey"] = decoded
-        except Exception:
+        # Verify the signed cursor
+        decoded = verify_cursor(cursor)
+        if not decoded:
             return error("Invalid pagination cursor", "invalid_cursor")
+        
+        # Additional validation - cursor must belong to the queried category
+        if decoded.get("GSI1PK") != category:
+            return error("Invalid pagination cursor", "invalid_cursor")
+        
+        query_kwargs["ExclusiveStartKey"] = decoded
 
     response = table.query(**query_kwargs)
     items = response.get("Items", [])
@@ -260,10 +259,7 @@ def search_listings(event, context):
     # Pagination
     last_key = response.get("LastEvaluatedKey")
     if last_key:
-        import base64
-        result["next_cursor"] = base64.b64encode(
-            json.dumps(last_key, default=str).encode()
-        ).decode()
+        result["next_cursor"] = sign_cursor(last_key)
 
     return success(result)
 
