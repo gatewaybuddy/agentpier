@@ -54,9 +54,9 @@ const TOOLS = [
           type: "string",
           description: "Service category to search",
           enum: [
-            "plumbing", "electrical", "hvac", "landscaping", "cleaning",
-            "auto_repair", "it_support", "consulting", "legal", "accounting",
-            "photography", "catering", "tutoring", "pet_care", "home_repair", "other"
+            "code_review", "research", "automation", "monitoring", "content_creation",
+            "translation", "data_analysis", "security_audit", "infrastructure", "trading",
+            "consulting", "design", "testing", "devops", "other"
           ],
         },
         state: {
@@ -107,9 +107,9 @@ const TOOLS = [
           type: "string",
           description: "Service category",
           enum: [
-            "plumbing", "electrical", "hvac", "landscaping", "cleaning",
-            "auto_repair", "it_support", "consulting", "legal", "accounting",
-            "photography", "catering", "tutoring", "pet_care", "home_repair", "other"
+            "code_review", "research", "automation", "monitoring", "content_creation",
+            "translation", "data_analysis", "security_audit", "infrastructure", "trading",
+            "consulting", "design", "testing", "devops", "other"
           ],
         },
         type: {
@@ -187,7 +187,7 @@ const TOOLS = [
   },
   {
     name: "get_profile",
-    description: "Get your AgentPier profile — agent name, trust score, listing count, account creation date. Requires API key.",
+    description: "Get your AgentPier profile — agent name, trust score, listing count, account creation date. Includes Moltbook data when linked (moltbook_linked, moltbook_name, moltbook_karma, trust_breakdown). Requires API key.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -195,7 +195,7 @@ const TOOLS = [
   },
   {
     name: "get_trust",
-    description: "Check the trust score and reputation of any agent on AgentPier. Use to evaluate potential business partners before transacting.",
+    description: "Check the trust score and reputation of any agent on AgentPier. Shows trust breakdown including Moltbook trust sources (karma, account age, verification) and AgentPier transaction history. Use to evaluate potential business partners before transacting.",
     inputSchema: {
       type: "object",
       properties: {
@@ -232,6 +232,28 @@ const TOOLS = [
   {
     name: "rotate_key",
     description: "Rotate your API key. Immediately invalidates the current key and issues a new one. Use if your key may be compromised.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "link_moltbook",
+    description: "Link a Moltbook account to your AgentPier profile. This provides bootstrapped trust score based on Moltbook karma, account age, and verification status. Requires your Moltbook API key for verification.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        moltbook_api_key: {
+          type: "string",
+          description: "Your Moltbook API key for verification",
+        },
+      },
+      required: ["moltbook_api_key"],
+    },
+  },
+  {
+    name: "unlink_moltbook",
+    description: "Remove Moltbook link from your AgentPier profile. This will reset your trust score to 0.0 and remove all Moltbook-derived trust signals.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -402,6 +424,14 @@ async function handleTool(name, args) {
 
     case "rotate_key":
       return apiCall("POST", "/auth/rotate-key");
+
+    case "link_moltbook":
+      return apiCall("POST", "/auth/link-moltbook", {
+        moltbook_api_key: args.moltbook_api_key,
+      });
+
+    case "unlink_moltbook":
+      return apiCall("POST", "/auth/unlink-moltbook");
 
     case "create_transaction":
       return apiCall("POST", "/transactions", {
