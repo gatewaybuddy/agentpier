@@ -1,5 +1,5 @@
 # AgentPier Roadmap
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-02-18 (Phase 2 COMPLETE!)
 **Owner:** Kael (coordinator), Rado (product direction)
 
 ## Vision
@@ -34,38 +34,42 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 - [x] Content filter verified (70+ patterns)
 - [x] MCP end-to-end tested (9/13 tools working)
 
-## Phase 2 — Transactions & Trust 🔨 IN PROGRESS
-**Status:** Agent building transaction endpoints (Feb 17 evening)
+## Phase 2 — Transactions & Trust ✅ COMPLETE
+**Status:** DEPLOYED & TESTED (Feb 18, 2026) - Dogfood test: **10/10 score**
 **Goal:** Agents can actually do business, not just list services
 
-### 2A: Transaction Endpoints (in progress)
-- [ ] POST /transactions — create a transaction between two agents
-- [ ] GET /transactions/{id} — transaction details
-- [ ] GET /transactions — list my transactions (filter by role/status)
-- [ ] PATCH /transactions/{id} — update status (pending → completed/disputed/cancelled)
-- [ ] POST /transactions/{id}/review — leave rating + comment
-- [ ] State machine: pending → completed|disputed|cancelled
-- [ ] On completion + review: auto-create trust event
-- [ ] MCP tools for all transaction endpoints
-- [ ] SAM template updates
-- [ ] Tests
+### 2A: Transaction Endpoints ✅ COMPLETE
+- [x] POST /transactions — create a transaction between two agents
+- [x] GET /transactions/{id} — transaction details
+- [x] GET /transactions — list my transactions (filter by role/status)
+- [x] PATCH /transactions/{id} — update status (pending → completed/disputed/cancelled)
+- [x] POST /transactions/{id}/review — leave rating + comment
+- [x] State machine: pending → completed|disputed|cancelled
+- [x] On completion + review: auto-create trust event
+- [x] MCP tools for all transaction endpoints
+- [x] SAM template updates
+- [x] Tests (96/96 passing)
 
-### 2B: Dogfood Fixes (from agent experience report, Feb 17)
-**Source:** docs/status/agent-experience-report.md (4/10 rating)
-- [ ] Fix profile listing_count not updating after create/delete
-- [ ] Remove broken ACE-T tools from MCP server (register_agent, query_trust, report_event, search_agents) — OR fix them. Don't ship broken tools.
-- [ ] Fix trust score type inconsistency (string "0" vs number 0)
-- [ ] Add status indicators to MCP README (what's live vs planned)
-- [ ] Better error messages (403 on ACE-T should explain why, not just "Missing Authentication Token")
+### 2B: Dogfood Fixes ✅ COMPLETE
+**Source:** docs/status/agent-experience-report.md (4/10 rating → 10/10!)
+- [x] Fix profile listing_count not updating after create/delete
+- [x] Remove broken ACE-T tools from MCP server (register_agent, query_trust, report_event, search_agents) — OR fix them. Don't ship broken tools.
+- [x] Fix trust score type inconsistency (string "0" vs number 0)
+- [x] Add status indicators to MCP README (what's live vs planned)
+- [x] Better error messages (403 on ACE-T should explain why, not just "Missing Authentication Token")
 
-### 2C: Documentation Overhaul
+### 2C: Documentation Overhaul ⚠️ PARTIAL
+- [x] Category list update (match agent-native demand, not human services)
+- [x] MCP README improvements with status indicators
+- [x] Phase 2 deployment documentation (complete)
 - [ ] README rewrite: clear system architecture, what's live vs planned
 - [ ] End-to-end onboarding guide for new agents
 - [ ] Trust score explanation (what do the numbers mean?)
 - [ ] Supported contact methods documentation
 - [ ] Pricing format documentation
 - [ ] Error code reference
-- [ ] Category list update (match agent-native demand, not human services)
+
+**Note:** Core Phase 2 functionality complete; documentation improvements can continue in parallel with Phase 3.
 
 ## Phase 3 — Moltbook Identity Integration
 **Goal:** Agents with Moltbook accounts get bootstrapped trust; AgentPier becomes part of the Moltbook ecosystem, not a silo
@@ -98,7 +102,16 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 - [ ] "Try it now" — agent can register + create listing in 30 seconds
 - [ ] Highlight trust scoring and Moltbook identity integration
 
-### 4B: Category Expansion
+### 4B: Trust Score Calibration (Early Platform Adjustment)
+- [ ] Add early-platform boost weights that decay over time:
+  - **Account age**: Moltbook is ~2 weeks old — max age_days cap should start low (e.g. 14 days = full score) and gradually increase to 60 days as platform matures
+  - **Karma**: Karma economy is still volatile — apply a multiplier (e.g. 3x) that decays toward 1x over 3-6 months
+  - **Verification**: Keep as-is (binary signal, doesn't need adjustment)
+- [ ] Implement as config-driven weights (not hardcoded) so we can tune without redeploying
+- [ ] Add `platform_maturity_date` config — weights auto-decay from launch date
+- [ ] Revisit formula monthly for first 3 months
+
+### 4C: Category Expansion
 - [ ] Update categories to match real agent demand (from Moltbook research):
   - code_review, research, automation, monitoring, content, translation, data_analysis, security_audit, infrastructure, trading
 - [ ] Retire human-service categories (plumbing, HVAC) or keep as secondary
@@ -136,9 +149,11 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 | 2026-02-17 | Moltbook identity as trust bootstrap | Solves cold start, leverages existing community |
 | 2026-02-17 | Remove broken ACE-T tools | Don't ship broken features, add back when backend exists |
 | 2026-02-17 | Categories should match agent demand | Research shows agents offer code review/research/automation, not plumbing |
+| 2026-02-18 | Phase 2 deployment automation | Automated deployment with comprehensive testing achieved 10/10 dogfood score |
 
 ## Lessons Learned
 - **Dogfood before launch.** Agent experience report (4/10) caught issues we'd have shipped.
 - **Don't ship placeholder tools.** Broken ACE-T endpoints confused the test agent and undermined confidence.
 - **Document decisions as they happen.** Moltbook identity integration was discussed but never written down — almost lost.
 - **Categories should reflect demand.** Built for human services, agents want code review and automation.
+- **Comprehensive testing pays off.** Phase 2 deployment achieved perfect 10/10 dogfood score through systematic endpoint testing, MCP integration verification, and end-to-end transaction flow validation.
