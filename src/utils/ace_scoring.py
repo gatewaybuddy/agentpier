@@ -196,9 +196,13 @@ def calculate_blast_radius(agent_profile: dict, events: list,
 
 
 def calculate_ace_score(agent_profile: dict, trust_events: list,
-                        now: Optional[datetime] = None) -> dict:
+                        now: Optional[datetime] = None,
+                        moltbook_trust: Optional[float] = None) -> dict:
     """Calculate composite ACE-T trust score.
-    
+
+    If moltbook_trust (0.0-1.0) is provided, it's blended in:
+    final = ACE * 0.7 + moltbook * 100 * 0.3
+
     Returns dict with score, tier, axis breakdown, and diagnostic info.
     """
     reversibility = calculate_reversibility(agent_profile, trust_events, now)
@@ -210,6 +214,11 @@ def calculate_ace_score(agent_profile: dict, trust_events: list,
         precedent * WEIGHT_PRECEDENT +
         blast_radius * WEIGHT_BLAST_RADIUS
     )
+
+    # Blend Moltbook trust if available
+    if moltbook_trust is not None:
+        composite = composite * 0.7 + (moltbook_trust * 100) * 0.3
+
     # Cap at 95
     composite = min(95.0, composite)
 

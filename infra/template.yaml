@@ -207,6 +207,44 @@ Resources:
             Method: DELETE
 
   # ============================================
+  # Moltbook Integration (Phase 3)
+  # ============================================
+
+  LinkMoltbookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-link-moltbook-${Stage}
+      Handler: handlers.auth.link_moltbook
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/link-moltbook
+            Method: POST
+
+  UnlinkMoltbookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-unlink-moltbook-${Stage}
+      Handler: handlers.auth.unlink_moltbook
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/unlink-moltbook
+            Method: POST
+
+  # ============================================
   # Trust API (ACE-T)
   # ============================================
 

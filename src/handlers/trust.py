@@ -14,6 +14,7 @@ from boto3.dynamodb.conditions import Key, Attr
 
 from utils.response import success, error, not_found
 from utils.ace_scoring import calculate_ace_score
+from utils.moltbook import fetch_trust_metrics, calculate_trust_score, MoltbookError
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -208,8 +209,49 @@ def trust_query(event, context):
     # Get events
     events = _get_agent_events(table, agent_id)
 
-    # Calculate current score
+    # Calculate current ACE score
     score_data = calculate_ace_score(profile, events)
+
+    # Build trust sources
+    sources = {
+        "agentpier": {
+            "trust_score": score_data["trust_score"],
+            "events": score_data["history"]["total_events"],
+        },
+    }
+
+    # Check for linked Moltbook account
+    moltbook_name = profile.get("moltbook_name", "")
+    combined_score = score_data["trust_score"]
+
+    if moltbook_name:
+        moltbook_source = {
+            "name": moltbook_name,
+            "karma": int(profile.get("moltbook_karma", 0)),
+            "age_days": 0,
+            "verified": bool(profile.get("moltbook_verified")),
+        }
+
+        # Try to refresh metrics from Moltbook (best-effort)
+        try:
+            moltbook_profile = fetch_trust_metrics(moltbook_name)
+            trust_result = calculate_trust_score(moltbook_profile)
+            moltbook_source["karma"] = trust_result["raw"]["karma"]
+            moltbook_source["age_days"] = trust_result["raw"]["age_days"]
+            moltbook_source["trust_score"] = trust_result["trust_score"]
+
+            # Blend: 40% ACE-T + 60% Moltbook (Moltbook is bootstrapped identity)
+            combined_score = round(
+                score_data["trust_score"] * 0.4 + trust_result["trust_score"] * 100 * 0.6,
+                2,
+            )
+            combined_score = min(95.0, combined_score)
+        except MoltbookError:
+            # Use cached data if Moltbook is unreachable
+            moltbook_source["trust_score"] = float(profile.get("trust_score", 0))
+            moltbook_source["cached"] = True
+
+        sources["moltbook"] = moltbook_source
 
     return success({
         "agent_id": agent_id,
@@ -219,11 +261,12 @@ def trust_query(event, context):
         "declared_scope": profile.get("declared_scope", ""),
         "contact_url": profile.get("contact_url", ""),
         "registered_at": profile.get("registered_at", ""),
-        "trust_score": score_data["trust_score"],
+        "trust_score": combined_score,
         "trust_tier": score_data["trust_tier"],
         "axes": score_data["axes"],
         "weights": score_data["weights"],
         "history": score_data["history"],
+        "sources": sources,
     })
 
 

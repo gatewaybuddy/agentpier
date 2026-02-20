@@ -10,6 +10,10 @@ import boto3
 from utils.response import success, error, unauthorized, too_many_requests
 from utils.auth import generate_api_key, authenticate
 from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
+from utils.moltbook import (
+    verify_moltbook_key, fetch_trust_metrics, calculate_trust_score,
+    MoltbookAuthError, MoltbookAPIError,
+)
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -124,6 +128,20 @@ def get_me(event, context):
         "transactions_completed": int(user.get("transactions_completed", 0)),
         "created_at": user.get("created_at"),
     }
+
+    # Include Moltbook data when linked
+    if user.get("moltbook_verified"):
+        profile["moltbook_linked"] = True
+        profile["moltbook_name"] = user.get("moltbook_name", "")
+        profile["moltbook_karma"] = int(user.get("moltbook_karma", 0))
+        profile["moltbook_verified_at"] = user.get("moltbook_verified_at", "")
+        trust_breakdown = user.get("trust_breakdown")
+        if trust_breakdown:
+            profile["trust_breakdown"] = {
+                k: float(v) for k, v in trust_breakdown.items()
+            }
+    else:
+        profile["moltbook_linked"] = False
 
     return success(profile)
 
@@ -263,4 +281,115 @@ def delete_account(event, context):
         "deleted": True,
         "user_id": user_id,
         "message": "Account and all associated data have been deleted."
+    })
+
+
+def link_moltbook(event, context):
+    """POST /auth/link-moltbook — Link a Moltbook account to your AgentPier profile."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    user = authenticate(event)
+    if not user:
+        record_auth_failure(event)
+        return unauthorized()
+
+    try:
+        body = json.loads(event.get("body", "{}"))
+    except json.JSONDecodeError:
+        return error("Invalid JSON body", "invalid_body")
+
+    moltbook_api_key = body.get("moltbook_api_key", "").strip()
+    if not moltbook_api_key:
+        return error("moltbook_api_key is required", "missing_field")
+
+    # Check if already linked
+    if user.get("moltbook_verified"):
+        return error(
+            f"Already linked to Moltbook account '{user.get('moltbook_name')}'. Unlink first.",
+            "already_linked", 409,
+        )
+
+    # Verify the Moltbook key
+    try:
+        moltbook_profile = verify_moltbook_key(moltbook_api_key)
+    except MoltbookAuthError:
+        return error("Invalid Moltbook API key", "invalid_moltbook_key", 401)
+    except MoltbookAPIError as e:
+        return error(f"Could not reach Moltbook: {e}", "moltbook_unavailable", 502)
+
+    agent_data = moltbook_profile.get("agent", {})
+    moltbook_name = agent_data.get("name", "")
+
+    # Calculate trust score from Moltbook metrics
+    trust_result = calculate_trust_score(moltbook_profile)
+
+    now = datetime.now(timezone.utc).isoformat()
+    user_id = user.get("user_id")
+    table = _get_table()
+
+    # Update user record with Moltbook data (never store the API key)
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression=(
+            "SET moltbook_name = :mn, moltbook_verified = :mv, "
+            "moltbook_verified_at = :mvat, moltbook_karma = :mk, "
+            "moltbook_account_age = :maa, moltbook_has_owner = :mho, "
+            "trust_score = :ts, trust_breakdown = :tb, updated_at = :now"
+        ),
+        ExpressionAttributeValues={
+            ":mn": moltbook_name,
+            ":mv": True,
+            ":mvat": now,
+            ":mk": agent_data.get("karma", 0),
+            ":maa": agent_data.get("created_at", ""),
+            ":mho": bool(agent_data.get("owner")),
+            ":ts": Decimal(str(trust_result["trust_score"])),
+            ":tb": trust_result["breakdown"],
+            ":now": now,
+        },
+    )
+
+    return success({
+        "linked": True,
+        "moltbook_name": moltbook_name,
+        "trust_score": trust_result["trust_score"],
+        "trust_breakdown": trust_result["breakdown"],
+    })
+
+
+def unlink_moltbook(event, context):
+    """POST /auth/unlink-moltbook — Remove Moltbook link from your profile."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    user = authenticate(event)
+    if not user:
+        record_auth_failure(event)
+        return unauthorized()
+
+    if not user.get("moltbook_verified"):
+        return error("No Moltbook account linked", "not_linked")
+
+    user_id = user.get("user_id")
+    now = datetime.now(timezone.utc).isoformat()
+    table = _get_table()
+
+    # Remove all Moltbook fields and reset trust score
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression=(
+            "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
+            "moltbook_karma, moltbook_account_age, moltbook_has_owner, trust_breakdown "
+            "SET trust_score = :ts, updated_at = :now"
+        ),
+        ExpressionAttributeValues={
+            ":ts": Decimal("0.0"),
+            ":now": now,
+        },
+    )
+
+    return success({
+        "unlinked": True,
+        "trust_score": 0.0,
     })
