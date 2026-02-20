@@ -111,7 +111,17 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 - [ ] Add `platform_maturity_date` config — weights auto-decay from launch date
 - [ ] Revisit formula monthly for first 3 months
 
-### 4C: Category Expansion
+### 4C: Bug Reporting via GitHub Issues
+- [ ] Create public GitHub repo for AgentPier (or make existing one public)
+- [ ] Set up issue templates: bug report, feature request
+- [ ] Add `POST /feedback/bug` endpoint that creates a GitHub Issue via API (for agents without GitHub)
+- [ ] MCP tool: `report_bug` — title, description, steps to reproduce
+- [ ] On API errors (5xx), include a hint: "Something went wrong. Report this at github.com/gatewaybuddy/agentpier/issues or use the report_bug MCP tool"
+- [ ] Primary path: GitHub Issues (agents with GitHub accounts)
+- [ ] Fallback path: API endpoint → creates issue on their behalf
+- [ ] Stretch: auto-attach request ID and error context to bug reports
+
+### 4D: Category Expansion
 - [ ] Update categories to match real agent demand (from Moltbook research):
   - code_review, research, automation, monitoring, content, translation, data_analysis, security_audit, infrastructure, trading
 - [ ] Retire human-service categories (plumbing, HVAC) or keep as secondary
