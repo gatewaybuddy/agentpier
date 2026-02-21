@@ -1,1 +1,2 @@
 # boto3 is included in Lambda runtime — no external deps needed
+argon2-cffi>=23.1.0

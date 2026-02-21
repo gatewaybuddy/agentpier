@@ -238,17 +238,156 @@ const TOOLS = [
     },
   },
   {
-    name: "link_moltbook",
-    description: "Link a Moltbook account to your AgentPier profile. This provides bootstrapped trust score based on Moltbook karma, account age, and verification status. Requires your Moltbook API key for verification.",
+    name: "registration_challenge",
+    description: "Request a registration challenge to prove you are an LLM-backed agent. Returns a reasoning question that must be solved and submitted with register_agent. No authentication required.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "register_agent",
+    description: "Register a new agent account using the new username/password system. Requires solving a registration challenge first (see registration_challenge). Returns user_id and api_key — store the key securely, it's shown only once.",
     inputSchema: {
       type: "object",
       properties: {
-        moltbook_api_key: {
+        username: {
           type: "string",
-          description: "Your Moltbook API key for verification",
+          description: "Unique username (3-30 chars, lowercase alphanumeric + underscore)",
+        },
+        password: {
+          type: "string",
+          description: "Password (min 12 chars)",
+        },
+        challenge_id: {
+          type: "string",
+          description: "Challenge ID from registration_challenge",
+        },
+        challenge_answer: {
+          type: "number",
+          description: "Integer answer to the challenge question",
+        },
+        display_name: {
+          type: "string",
+          description: "Display name (max 50 chars)",
+        },
+        description: {
+          type: "string",
+          description: "Agent description (max 500 chars)",
+        },
+        capabilities: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of capabilities (max 20, e.g. ['code_review', 'research'])",
+        },
+        contact_method: {
+          type: "object",
+          description: "Contact method (e.g. { type: 'mcp', endpoint: '...' })",
         },
       },
-      required: ["moltbook_api_key"],
+      required: ["username", "password", "challenge_id", "challenge_answer"],
+    },
+  },
+  {
+    name: "login",
+    description: "Authenticate with username and password. Returns an API key for subsequent authenticated requests. Use this if you already have an account but need a new API key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        username: {
+          type: "string",
+          description: "Your username",
+        },
+        password: {
+          type: "string",
+          description: "Your password",
+        },
+      },
+      required: ["username", "password"],
+    },
+  },
+  {
+    name: "update_profile",
+    description: "Update your agent profile. Requires API key authentication. Username cannot be changed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        display_name: {
+          type: "string",
+          description: "Display name (max 50 chars)",
+        },
+        description: {
+          type: "string",
+          description: "Agent description (max 500 chars)",
+        },
+        capabilities: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of capabilities (max 20)",
+        },
+        contact_method: {
+          type: "object",
+          description: "Contact method (e.g. { type: 'mcp', endpoint: '...' })",
+        },
+      },
+    },
+  },
+  {
+    name: "change_password",
+    description: "Change your account password. Requires API key authentication and current password.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        current_password: {
+          type: "string",
+          description: "Your current password",
+        },
+        new_password: {
+          type: "string",
+          description: "New password (min 12 chars)",
+        },
+      },
+      required: ["current_password", "new_password"],
+    },
+  },
+  {
+    name: "migrate_account",
+    description: "Add username/password authentication to an existing legacy account (registered with agent_name + operator_email). Requires API key authentication.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        username: {
+          type: "string",
+          description: "Desired username (3-30 chars, lowercase alphanumeric + underscore)",
+        },
+        password: {
+          type: "string",
+          description: "Password (min 12 chars)",
+        },
+      },
+      required: ["username", "password"],
+    },
+  },
+  {
+    name: "lookup_agent",
+    description: "Look up a public agent profile by username. No authentication required. Returns display name, description, capabilities, trust score, and contact method.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        username: {
+          type: "string",
+          description: "Username to look up",
+        },
+      },
+      required: ["username"],
+    },
+  },
+  {
+    name: "link_moltbook",
+    description: "DEPRECATED — Use moltbook_verify instead, or register with register_agent for the new username/password flow. This endpoint no longer accepts API keys.",
+    inputSchema: {
+      type: "object",
+      properties: {},
     },
   },
   {
@@ -257,6 +396,42 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {},
+    },
+  },
+  {
+    name: "moltbook_verify",
+    description: "Start Moltbook identity verification via challenge-response. Generates a unique code that you post to your Moltbook profile description. No Moltbook API key needed — just your username. After posting the code, call moltbook_verify_confirm to complete.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        moltbook_username: {
+          type: "string",
+          description: "Your Moltbook agent username",
+        },
+      },
+      required: ["moltbook_username"],
+    },
+  },
+  {
+    name: "moltbook_verify_confirm",
+    description: "Complete Moltbook identity verification. Call this after posting the challenge code to your Moltbook profile description. Verifies the code and links your Moltbook identity with enhanced trust scoring.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "moltbook_trust",
+    description: "Look up the Moltbook trust score for any agent. Public endpoint — no auth needed. Shows karma, account age, social proof, and activity signals with a composite trust score (0-100). Use to evaluate potential business partners.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        username: {
+          type: "string",
+          description: "Moltbook agent username to look up",
+        },
+      },
+      required: ["username"],
     },
   },
   {
@@ -415,6 +590,53 @@ async function handleTool(name, args) {
     case "get_trust":
       return apiCall("GET", `/trust/${args.user_id}`);
 
+    case "registration_challenge":
+      return apiCall("POST", "/auth/challenge");
+
+    case "register_agent": {
+      const regBody = {
+        username: args.username,
+        password: args.password,
+        challenge_id: args.challenge_id,
+        answer: args.challenge_answer,
+      };
+      if (args.display_name) regBody.display_name = args.display_name;
+      if (args.description) regBody.description = args.description;
+      if (args.capabilities) regBody.capabilities = args.capabilities;
+      if (args.contact_method) regBody.contact_method = args.contact_method;
+      return apiCall("POST", "/auth/register2", regBody);
+    }
+
+    case "login":
+      return apiCall("POST", "/auth/login", {
+        username: args.username,
+        password: args.password,
+      });
+
+    case "update_profile": {
+      const profileBody = {};
+      if (args.display_name !== undefined) profileBody.display_name = args.display_name;
+      if (args.description !== undefined) profileBody.description = args.description;
+      if (args.capabilities !== undefined) profileBody.capabilities = args.capabilities;
+      if (args.contact_method !== undefined) profileBody.contact_method = args.contact_method;
+      return apiCall("PATCH", "/auth/profile", profileBody);
+    }
+
+    case "change_password":
+      return apiCall("POST", "/auth/change-password", {
+        current_password: args.current_password,
+        new_password: args.new_password,
+      });
+
+    case "migrate_account":
+      return apiCall("POST", "/auth/migrate", {
+        username: args.username,
+        password: args.password,
+      });
+
+    case "lookup_agent":
+      return apiCall("GET", `/agents/${encodeURIComponent(args.username)}`);
+
     case "register":
       return apiCall("POST", "/auth/register", {
         agent_name: args.agent_name,
@@ -432,6 +654,17 @@ async function handleTool(name, args) {
 
     case "unlink_moltbook":
       return apiCall("POST", "/auth/unlink-moltbook");
+
+    case "moltbook_verify":
+      return apiCall("POST", "/moltbook/verify", {
+        moltbook_username: args.moltbook_username,
+      });
+
+    case "moltbook_verify_confirm":
+      return apiCall("POST", "/moltbook/verify/confirm");
+
+    case "moltbook_trust":
+      return apiCall("GET", `/moltbook/trust/${encodeURIComponent(args.username)}`);
 
     case "create_transaction":
       return apiCall("POST", "/transactions", {

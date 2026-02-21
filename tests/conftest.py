@@ -103,6 +103,7 @@ def sample_user(dynamodb):
         "GSI2SK": now,
         "user_id": user_id,
         "key_hash": key_hash,
+        "api_key_raw": raw_key,
         "permissions": ["read", "write"],
         "created_at": now,
     })

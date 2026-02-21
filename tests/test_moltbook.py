@@ -152,65 +152,13 @@ class TestCalculateTrustScore:
 # ---------------------------------------------------------------------------
 
 class TestVerifyMoltbookKey:
-    """Mock HTTP responses for Moltbook API calls."""
+    """verify_moltbook_key is deprecated — all calls should raise DeprecationWarning."""
 
-    @patch("utils.moltbook.urlopen")
-    def test_success(self, mock_urlopen):
+    def test_deprecated(self):
         from utils.moltbook import verify_moltbook_key
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"agent": {"name": "testbot"}}).encode()
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
-
-        result = verify_moltbook_key("valid-key-123")
-        assert result["agent"]["name"] == "testbot"
-        # Check auth header was set
-        call_args = mock_urlopen.call_args
-        req = call_args[0][0]
-        assert req.get_header("Authorization") == "Bearer valid-key-123"
-
-    @patch("utils.moltbook.urlopen")
-    def test_invalid_key_401(self, mock_urlopen):
-        from utils.moltbook import verify_moltbook_key, MoltbookAuthError
-
-        mock_urlopen.side_effect = HTTPError(
-            url="https://www.moltbook.com/api/v1/agents/me",
-            code=401, msg="Unauthorized", hdrs={}, fp=None,
-        )
-        with pytest.raises(MoltbookAuthError, match="Invalid Moltbook API key"):
-            verify_moltbook_key("bad-key")
-
-    @patch("utils.moltbook.urlopen")
-    def test_not_found_404(self, mock_urlopen):
-        from utils.moltbook import verify_moltbook_key, MoltbookNotFoundError
-
-        mock_urlopen.side_effect = HTTPError(
-            url="https://www.moltbook.com/api/v1/agents/me",
-            code=404, msg="Not Found", hdrs={}, fp=None,
-        )
-        with pytest.raises(MoltbookNotFoundError):
-            verify_moltbook_key("some-key")
-
-    @patch("utils.moltbook.urlopen")
-    def test_rate_limited_429(self, mock_urlopen):
-        from utils.moltbook import verify_moltbook_key, MoltbookRateLimitError
-
-        mock_urlopen.side_effect = HTTPError(
-            url="https://www.moltbook.com/api/v1/agents/me",
-            code=429, msg="Too Many Requests", hdrs={}, fp=None,
-        )
-        with pytest.raises(MoltbookRateLimitError):
-            verify_moltbook_key("some-key")
-
-    @patch("utils.moltbook.urlopen")
-    def test_timeout(self, mock_urlopen):
-        from utils.moltbook import verify_moltbook_key, MoltbookAPIError
-
-        mock_urlopen.side_effect = URLError("timed out")
-        with pytest.raises(MoltbookAPIError, match="unreachable"):
-            verify_moltbook_key("some-key")
+        with pytest.raises(DeprecationWarning, match="deprecated"):
+            verify_moltbook_key("any-key")
 
 
 class TestFetchTrustMetrics:
@@ -262,134 +210,21 @@ class TestFetchTrustMetrics:
 # ---------------------------------------------------------------------------
 
 class TestLinkMoltbook:
-    """Integration tests: link_moltbook handler with moto DynamoDB."""
+    """link_moltbook is deprecated — should return 410 for all calls."""
 
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_successful_link(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-
-        user_id, raw_key = sample_user
-        created_90d_ago = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
-
-        mock_verify.return_value = {
-            "agent": {
-                "name": "my-moltbook-agent",
-                "karma": 500,
-                "created_at": created_90d_ago,
-                "is_claimed": True,
-                "owner": "owner-123",
-            }
-        }
-
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-
-        assert resp["statusCode"] == 200
-        body = json.loads(resp["body"])
-        assert body["linked"] is True
-        assert body["moltbook_name"] == "my-moltbook-agent"
-        assert body["trust_score"] == 1.0
-
-        # Verify DynamoDB was updated
-        item = dynamodb.get_item(
-            Key={"PK": f"USER#{user_id}", "SK": "META"}
-        )["Item"]
-        assert item["moltbook_verified"] is True
-        assert item["moltbook_name"] == "my-moltbook-agent"
-        assert float(item["trust_score"]) == 1.0
-
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_invalid_moltbook_key(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-        from utils.moltbook import MoltbookAuthError
-
-        _, raw_key = sample_user
-        mock_verify.side_effect = MoltbookAuthError("Invalid Moltbook API key")
-
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "bad_key"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-
-        assert resp["statusCode"] == 401
-        body = json.loads(resp["body"])
-        assert body["error"] == "invalid_moltbook_key"
-
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_already_linked_409(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-
-        user_id, raw_key = sample_user
-
-        # Pre-set moltbook_verified on the user record
-        dynamodb.update_item(
-            Key={"PK": f"USER#{user_id}", "SK": "META"},
-            UpdateExpression="SET moltbook_verified = :mv, moltbook_name = :mn",
-            ExpressionAttributeValues={":mv": True, ":mn": "already-linked"},
-        )
-
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-
-        assert resp["statusCode"] == 409
-        body = json.loads(resp["body"])
-        assert body["error"] == "already_linked"
-        # verify_moltbook_key should never be called
-        mock_verify.assert_not_called()
-
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_moltbook_api_down_502(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-        from utils.moltbook import MoltbookAPIError
-
-        _, raw_key = sample_user
-        mock_verify.side_effect = MoltbookAPIError("Moltbook API unreachable: timed out")
-
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-
-        assert resp["statusCode"] == 502
-        body = json.loads(resp["body"])
-        assert body["error"] == "moltbook_unavailable"
-
-    def test_missing_moltbook_key_field(self, dynamodb, sample_user):
+    def test_deprecated_returns_410(self, dynamodb, sample_user):
         from handlers.auth import link_moltbook
 
         _, raw_key = sample_user
         event = make_api_event(
             method="POST", path="/auth/link-moltbook",
-            body={},
+            body={"moltbook_api_key": "mb_key_abc"},
             api_key=raw_key,
         )
         resp = link_moltbook(event, None)
-
-        assert resp["statusCode"] == 400
+        assert resp["statusCode"] == 410
         body = json.loads(resp["body"])
-        assert body["error"] == "missing_field"
-
-    def test_unauthenticated(self, dynamodb):
-        from handlers.auth import link_moltbook
-
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-        )
-        resp = link_moltbook(event, None)
-        assert resp["statusCode"] == 401
+        assert body["error"] == "deprecated_endpoint"
 
 
 # ---------------------------------------------------------------------------
@@ -399,36 +234,23 @@ class TestLinkMoltbook:
 class TestUnlinkMoltbook:
     """Integration tests: unlink_moltbook handler."""
 
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_successful_unlink(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook, unlink_moltbook
+    def test_successful_unlink(self, dynamodb, sample_user):
+        from handlers.auth import unlink_moltbook
 
         user_id, raw_key = sample_user
-        created_90d_ago = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
 
-        # First link a Moltbook account
-        mock_verify.return_value = {
-            "agent": {
-                "name": "linked-agent",
-                "karma": 300,
-                "created_at": created_90d_ago,
-                "is_claimed": True,
-                "owner": "owner-1",
-            }
-        }
-        link_event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
+        # Directly set moltbook fields in DB (link_moltbook is deprecated)
+        dynamodb.update_item(
+            Key={"PK": f"USER#{user_id}", "SK": "META"},
+            UpdateExpression=(
+                "SET moltbook_verified = :mv, moltbook_name = :mn, "
+                "trust_score = :ts, moltbook_verified_at = :mvat"
+            ),
+            ExpressionAttributeValues={
+                ":mv": True, ":mn": "linked-agent",
+                ":ts": Decimal("0.8"), ":mvat": "2025-01-01T00:00:00+00:00",
+            },
         )
-        link_resp = link_moltbook(link_event, None)
-        assert link_resp["statusCode"] == 200
-
-        # Verify trust_score > 0 after linking
-        item = dynamodb.get_item(
-            Key={"PK": f"USER#{user_id}", "SK": "META"}
-        )["Item"]
-        assert float(item["trust_score"]) > 0
 
         # Now unlink
         unlink_event = make_api_event(
@@ -481,31 +303,28 @@ class TestUnlinkMoltbook:
 class TestGetMeWithMoltbook:
     """get_me should include Moltbook data when linked."""
 
-    @patch("handlers.auth.verify_moltbook_key")
-    def test_get_me_shows_moltbook_when_linked(self, mock_verify, dynamodb, sample_user):
-        from handlers.auth import link_moltbook, get_me
+    def test_get_me_shows_moltbook_when_linked(self, dynamodb, sample_user):
+        from handlers.auth import get_me
 
         user_id, raw_key = sample_user
-        created_60d_ago = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
 
-        mock_verify.return_value = {
-            "agent": {
-                "name": "visible-agent",
-                "karma": 200,
-                "created_at": created_60d_ago,
-                "is_claimed": True,
-                "owner": "owner-x",
-            }
-        }
-
-        # Link first
-        link_event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_xyz"},
-            api_key=raw_key,
+        # Directly set moltbook fields in DB (link_moltbook is deprecated)
+        dynamodb.update_item(
+            Key={"PK": f"USER#{user_id}", "SK": "META"},
+            UpdateExpression=(
+                "SET moltbook_verified = :mv, moltbook_name = :mn, "
+                "moltbook_karma = :mk, moltbook_verified_at = :mvat, "
+                "trust_score = :ts, trust_breakdown = :tb"
+            ),
+            ExpressionAttributeValues={
+                ":mv": True,
+                ":mn": "visible-agent",
+                ":mk": 200,
+                ":mvat": "2025-01-01T00:00:00+00:00",
+                ":ts": Decimal("0.8"),
+                ":tb": {"karma": Decimal("0.4"), "account_age": Decimal("0.3"), "verification": Decimal("0.3")},
+            },
         )
-        link_resp = link_moltbook(link_event, None)
-        assert link_resp["statusCode"] == 200
 
         # Now call get_me
         me_event = make_api_event(method="GET", path="/auth/me", api_key=raw_key)

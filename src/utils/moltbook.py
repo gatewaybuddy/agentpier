@@ -62,13 +62,12 @@ class MoltbookAPIError(MoltbookError):
 
 
 def verify_moltbook_key(api_key):
-    """Verify a Moltbook API key by calling GET /api/v1/agents/me.
-
-    Returns the agent profile dict if valid.
-    Raises MoltbookAuthError if the key is invalid.
-    Raises MoltbookAPIError if the API is unreachable.
+    """DEPRECATED — Do not use. Accepting agent API keys is a trust violation.
+    Use challenge-response verification via handlers/moltbook.py instead.
     """
-    return _moltbook_request("/agents/me", api_key=api_key)
+    raise DeprecationWarning(
+        "verify_moltbook_key is deprecated. Use challenge-response verification."
+    )
 
 
 def fetch_trust_metrics(agent_name):

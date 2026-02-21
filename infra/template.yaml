@@ -138,6 +138,40 @@ Resources:
             Path: /listings/{id}
             Method: DELETE
 
+  RequestChallengeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-request-challenge-${Stage}
+      Handler: handlers.auth.request_challenge
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/challenge
+            Method: POST
+
+  RegisterWithChallengeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-register-challenge-${Stage}
+      Handler: handlers.auth.register_with_challenge
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/register2
+            Method: POST
+
   RegisterFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -207,6 +241,95 @@ Resources:
             Method: DELETE
 
   # ============================================
+  # Profile, Login & Migration (Generic Profile System)
+  # ============================================
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-login-${Stage}
+      Handler: handlers.profile.login
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/login
+            Method: POST
+
+  UpdateProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-update-profile-${Stage}
+      Handler: handlers.profile.update_profile
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/profile
+            Method: PATCH
+
+  ChangePasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-change-password-${Stage}
+      Handler: handlers.profile.change_password
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/change-password
+            Method: POST
+
+  GetPublicProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-public-profile-${Stage}
+      Handler: handlers.profile.get_public_profile
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /agents/{username}
+            Method: GET
+
+  MigrateAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-migrate-account-${Stage}
+      Handler: handlers.profile.migrate
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /auth/migrate
+            Method: POST
+
+  # ============================================
   # Moltbook Integration (Phase 3)
   # ============================================
 
@@ -243,6 +366,61 @@ Resources:
             RestApiId: !Ref AgentPierApi
             Path: /auth/unlink-moltbook
             Method: POST
+
+  # ============================================
+  # Moltbook Identity Verification (Phase 3A)
+  # ============================================
+
+  MoltbookVerifyInitiateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-moltbook-verify-initiate-${Stage}
+      Handler: handlers.moltbook.moltbook_verify_initiate
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /moltbook/verify
+            Method: POST
+
+  MoltbookVerifyConfirmFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-moltbook-verify-confirm-${Stage}
+      Handler: handlers.moltbook.moltbook_verify_confirm
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /moltbook/verify/confirm
+            Method: POST
+
+  MoltbookTrustFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-moltbook-trust-${Stage}
+      Handler: handlers.moltbook.moltbook_trust
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /moltbook/trust/{username}
+            Method: GET
 
   # ============================================
   # Trust API (ACE-T)
@@ -431,6 +609,9 @@ Resources:
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
       GlobalSecondaryIndexes:
         - IndexName: GSI1
           KeySchema:

@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import time
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -9,11 +11,12 @@ import boto3
 
 from utils.response import success, error, unauthorized, too_many_requests
 from utils.auth import generate_api_key, authenticate
-from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
-from utils.moltbook import (
-    verify_moltbook_key, fetch_trust_metrics, calculate_trust_score,
-    MoltbookAuthError, MoltbookAPIError,
-)
+from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
+from utils.challenges import generate_challenge
+from utils.moltbook import MoltbookError  # noqa: F401 — kept for backward compat
+
+CHALLENGE_TTL = 300  # 5 minutes
+USERNAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -21,6 +24,240 @@ TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 def _get_table():
     dynamodb = boto3.resource("dynamodb")
     return dynamodb.Table(TABLE_NAME)
+
+
+def request_challenge(event, context):
+    """POST /auth/challenge — Request a registration challenge."""
+    # Rate limit: 10 challenges per IP per hour
+    allowed, remaining, retry_after = check_rate_limit(event, "challenge", max_requests=10, window_seconds=3600)
+    if not allowed:
+        return too_many_requests("Too many challenge requests. Try again later.", retry_after)
+
+    try:
+        body = json.loads(event.get("body") or "{}")
+    except json.JSONDecodeError:
+        return error("Invalid JSON body", "invalid_body")
+
+    username = (body.get("username") or "").strip().lower()
+    if not username or len(username) < 3 or len(username) > 30 or not USERNAME_RE.match(username):
+        return error(
+            "username must be 3-30 chars, lowercase alphanumeric + underscore",
+            "invalid_username",
+        )
+
+    table = _get_table()
+
+    # Check if username already taken
+    existing = table.query(
+        IndexName="GSI1",
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("GSI1PK").eq(f"USERNAME#{username}"),
+        Limit=1,
+    )
+    # Also check legacy agent names
+    if not existing.get("Items"):
+        existing = table.query(
+            IndexName="GSI1",
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("GSI1PK").eq(f"AGENT_NAME#{username}"),
+            Limit=1,
+        )
+    if existing.get("Items"):
+        return error("Username already taken", "name_taken", 409)
+
+    # Generate challenge
+    challenge = generate_challenge()
+    now = datetime.now(timezone.utc).isoformat()
+    now_epoch = int(time.time())
+    expires_at = now_epoch + CHALLENGE_TTL
+    ip = get_client_ip(event)
+
+    # Store challenge in DynamoDB
+    table.put_item(Item={
+        "PK": f"CHALLENGE#{challenge['challenge_id']}",
+        "SK": "META",
+        "challenge_id": challenge["challenge_id"],
+        "challenge_text": challenge["challenge_text"],
+        "expected_answer": challenge["expected_answer"],
+        "source_ip": ip,
+        "created_at": now,
+        "expires_at": expires_at,
+        "ttl": expires_at,
+        "used": False,
+    })
+
+    # Track IP for rate limiting registrations
+    table.put_item(Item={
+        "PK": f"IP_REG#{ip}",
+        "SK": str(now_epoch),
+        "ttl": now_epoch + 86400,  # 24h TTL
+    })
+
+    return success({
+        "challenge_id": challenge["challenge_id"],
+        "challenge": challenge["challenge_text"],
+        "expires_in_seconds": CHALLENGE_TTL,
+    })
+
+
+def register_with_challenge(event, context):
+    """POST /auth/register2 — Register with challenge-response verification."""
+    # Rate limit: 5 registrations per IP per hour
+    allowed, remaining, retry_after = check_rate_limit(event, "register2", max_requests=5, window_seconds=3600)
+    if not allowed:
+        return too_many_requests("Registration rate limit exceeded", retry_after)
+
+    try:
+        body = json.loads(event.get("body", "{}"))
+    except json.JSONDecodeError:
+        return error("Invalid JSON body", "invalid_body")
+
+    # Validate required fields
+    username = (body.get("username") or "").strip().lower()
+    password = body.get("password", "")
+    challenge_id = body.get("challenge_id", "")
+    challenge_answer = body.get("answer")
+
+    if not username or len(username) < 3 or len(username) > 30 or not USERNAME_RE.match(username):
+        return error("username must be 3-30 chars, lowercase alphanumeric + underscore", "invalid_username")
+
+    if not password or len(password) < 12 or len(password) > 128:
+        return error("password must be 12-128 characters", "invalid_password")
+
+    if not challenge_id:
+        return error("challenge_id is required", "missing_challenge")
+
+    if challenge_answer is None:
+        return error("answer is required", "missing_answer")
+
+    try:
+        challenge_answer = int(challenge_answer)
+    except (ValueError, TypeError):
+        return error("answer must be an integer", "invalid_answer")
+
+    table = _get_table()
+
+    # Validate challenge
+    challenge_resp = table.get_item(
+        Key={"PK": f"CHALLENGE#{challenge_id}", "SK": "META"}
+    )
+    challenge_item = challenge_resp.get("Item")
+
+    if not challenge_item:
+        return error("Invalid or expired challenge", "invalid_challenge")
+
+    if challenge_item.get("used"):
+        return error("Challenge already used", "challenge_used")
+
+    now_epoch = int(time.time())
+    if now_epoch > int(challenge_item.get("expires_at", 0)):
+        return error("Challenge expired", "challenge_expired")
+
+    # Mark challenge as used immediately (single-use)
+    table.update_item(
+        Key={"PK": f"CHALLENGE#{challenge_id}", "SK": "META"},
+        UpdateExpression="SET used = :t",
+        ExpressionAttributeValues={":t": True},
+    )
+
+    # Verify answer
+    if challenge_answer != int(challenge_item.get("expected_answer", -1)):
+        return error("Incorrect challenge answer", "wrong_answer")
+
+    # Check username uniqueness
+    existing = table.query(
+        IndexName="GSI1",
+        KeyConditionExpression=boto3.dynamodb.conditions.Key("GSI1PK").eq(f"USERNAME#{username}"),
+        Limit=1,
+    )
+    if not existing.get("Items"):
+        existing = table.query(
+            IndexName="GSI1",
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("GSI1PK").eq(f"AGENT_NAME#{username}"),
+            Limit=1,
+        )
+    if existing.get("Items"):
+        return error("Username already taken", "name_taken", 409)
+
+    # Hash password with argon2id
+    from argon2 import PasswordHasher
+    ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
+    password_hash = ph.hash(password)
+
+    # Optional fields
+    display_name = (body.get("display_name") or "")[:50].strip()
+    description = (body.get("description") or "")[:500].strip()
+    capabilities = body.get("capabilities") or []
+    if not isinstance(capabilities, list):
+        capabilities = []
+    capabilities = [str(c)[:50] for c in capabilities[:20]]
+    contact_method = body.get("contact_method")
+    if contact_method and isinstance(contact_method, dict):
+        cm_type = contact_method.get("type", "")
+        cm_endpoint = contact_method.get("endpoint", "")
+        if cm_type not in ("mcp", "webhook", "http"):
+            contact_method = None
+        else:
+            contact_method = {"type": cm_type, "endpoint": cm_endpoint[:500]}
+    else:
+        contact_method = None
+
+    import uuid
+    user_id = uuid.uuid4().hex[:12]
+    now = datetime.now(timezone.utc).isoformat()
+    ip = get_client_ip(event)
+
+    # Generate API key
+    raw_key, key_hash = generate_api_key()
+
+    # Create user record
+    user_item = {
+        "PK": f"USER#{user_id}",
+        "SK": "META",
+        "GSI1PK": f"USERNAME#{username}",
+        "GSI1SK": now,
+        "user_id": user_id,
+        "username": username,
+        "password_hash": password_hash,
+        "trust_score": Decimal("0.0"),
+        "listings_count": 0,
+        "transactions_completed": 0,
+        "dispute_rate": Decimal("0.0"),
+        "registration_ip": ip,
+        "created_at": now,
+        "updated_at": now,
+        "last_active": now,
+        "moltbook_verified": False,
+    }
+    if display_name:
+        user_item["display_name"] = display_name
+    if description:
+        user_item["description"] = description
+    if capabilities:
+        user_item["capabilities"] = capabilities
+    if contact_method:
+        user_item["contact_method"] = contact_method
+
+    # Create API key record (store raw key for login retrieval)
+    key_item = {
+        "PK": f"USER#{user_id}",
+        "SK": f"APIKEY#{key_hash[:16]}",
+        "GSI2PK": f"APIKEY#{key_hash}",
+        "GSI2SK": now,
+        "user_id": user_id,
+        "key_hash": key_hash,
+        "api_key_raw": raw_key,
+        "permissions": ["read", "write"],
+        "created_at": now,
+    }
+
+    table.put_item(Item=user_item)
+    table.put_item(Item=key_item)
+
+    return success({
+        "user_id": user_id,
+        "username": username,
+        "api_key": raw_key,
+        "message": "Registration complete. Store your API key securely — it cannot be retrieved again.",
+    }, 201)
 
 
 def register(event, context):
@@ -285,77 +522,12 @@ def delete_account(event, context):
 
 
 def link_moltbook(event, context):
-    """POST /auth/link-moltbook — Link a Moltbook account to your AgentPier profile."""
-    if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
-
-    user = authenticate(event)
-    if not user:
-        record_auth_failure(event)
-        return unauthorized()
-
-    try:
-        body = json.loads(event.get("body", "{}"))
-    except json.JSONDecodeError:
-        return error("Invalid JSON body", "invalid_body")
-
-    moltbook_api_key = body.get("moltbook_api_key", "").strip()
-    if not moltbook_api_key:
-        return error("moltbook_api_key is required", "missing_field")
-
-    # Check if already linked
-    if user.get("moltbook_verified"):
-        return error(
-            f"Already linked to Moltbook account '{user.get('moltbook_name')}'. Unlink first.",
-            "already_linked", 409,
-        )
-
-    # Verify the Moltbook key
-    try:
-        moltbook_profile = verify_moltbook_key(moltbook_api_key)
-    except MoltbookAuthError:
-        return error("Invalid Moltbook API key", "invalid_moltbook_key", 401)
-    except MoltbookAPIError as e:
-        return error(f"Could not reach Moltbook: {e}", "moltbook_unavailable", 502)
-
-    agent_data = moltbook_profile.get("agent", {})
-    moltbook_name = agent_data.get("name", "")
-
-    # Calculate trust score from Moltbook metrics
-    trust_result = calculate_trust_score(moltbook_profile)
-
-    now = datetime.now(timezone.utc).isoformat()
-    user_id = user.get("user_id")
-    table = _get_table()
-
-    # Update user record with Moltbook data (never store the API key)
-    table.update_item(
-        Key={"PK": f"USER#{user_id}", "SK": "META"},
-        UpdateExpression=(
-            "SET moltbook_name = :mn, moltbook_verified = :mv, "
-            "moltbook_verified_at = :mvat, moltbook_karma = :mk, "
-            "moltbook_account_age = :maa, moltbook_has_owner = :mho, "
-            "trust_score = :ts, trust_breakdown = :tb, updated_at = :now"
-        ),
-        ExpressionAttributeValues={
-            ":mn": moltbook_name,
-            ":mv": True,
-            ":mvat": now,
-            ":mk": agent_data.get("karma", 0),
-            ":maa": agent_data.get("created_at", ""),
-            ":mho": bool(agent_data.get("owner")),
-            ":ts": Decimal(str(trust_result["trust_score"])),
-            ":tb": trust_result["breakdown"],
-            ":now": now,
-        },
+    """POST /auth/link-moltbook — DEPRECATED. Use POST /moltbook/verify instead."""
+    return error(
+        "This endpoint is deprecated. Use POST /moltbook/verify for challenge-response "
+        "verification — no credential sharing required. See the moltbook_verify MCP tool.",
+        "deprecated_endpoint", 410,
     )
-
-    return success({
-        "linked": True,
-        "moltbook_name": moltbook_name,
-        "trust_score": trust_result["trust_score"],
-        "trust_breakdown": trust_result["breakdown"],
-    })
 
 
 def unlink_moltbook(event, context):
