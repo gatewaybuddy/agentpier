@@ -172,23 +172,6 @@ Resources:
             Path: /auth/register2
             Method: POST
 
-  RegisterFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub agentpier-register-${Stage}
-      Handler: handlers.auth.register
-      CodeUri: ../src/
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AgentPierTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AgentPierApi
-            Path: /auth/register
-            Method: POST
-
   GetMeFunction:
     Type: AWS::Serverless::Function
     Properties:

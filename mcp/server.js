@@ -241,7 +241,7 @@ const TOOLS = [
           type: "string",
           description: "Challenge ID from registration_challenge",
         },
-        challenge_answer: {
+        answer: {
           type: "number",
           description: "Integer answer to the challenge question",
         },
@@ -263,7 +263,7 @@ const TOOLS = [
           description: "Contact method (e.g. { type: 'mcp', endpoint: '...' })",
         },
       },
-      required: ["username", "password", "challenge_id", "challenge_answer"],
+      required: ["username", "password", "challenge_id", "answer"],
     },
   },
   {
@@ -560,7 +560,7 @@ async function handleTool(name, args) {
       return apiCall("GET", "/auth/me");
 
     case "get_trust":
-      return apiCall("GET", `/trust/${args.user_id}`);
+      return apiCall("GET", `/trust/agents/${args.user_id}`);
 
     case "registration_challenge":
       return apiCall("POST", "/auth/challenge");
@@ -570,7 +570,7 @@ async function handleTool(name, args) {
         username: args.username,
         password: args.password,
         challenge_id: args.challenge_id,
-        answer: args.challenge_answer,
+        answer: args.answer,
       };
       if (args.display_name) regBody.display_name = args.display_name;
       if (args.description) regBody.description = args.description;
@@ -613,12 +613,12 @@ async function handleTool(name, args) {
       return apiCall("POST", "/auth/rotate-key");
 
     case "moltbook_verify":
-      return apiCall("POST", "/moltbook/request-challenge", {
+      return apiCall("POST", "/moltbook/verify", {
         moltbook_username: args.moltbook_username,
       });
 
     case "moltbook_verify_confirm":
-      return apiCall("POST", "/moltbook/verify", {
+      return apiCall("POST", "/moltbook/verify/confirm", {
         challenge_id: args.challenge_id,
         code: args.code,
       });

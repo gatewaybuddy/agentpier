@@ -36,7 +36,7 @@ def _call_handler(handler_module, method, path, body=None, headers=None,
     route_key = f"{method} {path.split('?')[0]}"
     routes = {
         "POST /auth/challenge": auth.request_challenge,
-        "POST /auth/register": auth.register_with_challenge,
+        "POST /auth/register2": auth.register_with_challenge,
         "POST /auth/login": prof.login,
         "PATCH /auth/profile": prof.update_profile,
         "POST /auth/change-password": prof.change_password,
@@ -105,12 +105,12 @@ class TestChallenge:
             "challenge_id": cid,
             "answer": answer,
         }
-        s1, _ = _call_handler(h, "POST", "/auth/register", body=reg_body)
+        s1, _ = _call_handler(h, "POST", "/auth/register2", body=reg_body)
         assert s1 == 200 or s1 == 201
 
         # Try again with same challenge
         reg_body["username"] = "singleuse_agent2"
-        s2, b2 = _call_handler(h, "POST", "/auth/register", body=reg_body)
+        s2, b2 = _call_handler(h, "POST", "/auth/register2", body=reg_body)
         assert s2 in (400, 409, 410)  # challenge used / expired / invalid
 
     @pytest.mark.skip(reason="Rate limiter uses same-second SK; collapses in fast test loops")
@@ -144,7 +144,7 @@ class TestRegistration:
     def test_happy_path(self, dynamodb):
         from handlers import profile as h
         cid, answer = self._get_challenge_and_answer(dynamodb, h)
-        status, body = _call_handler(h, "POST", "/auth/register", body={
+        status, body = _call_handler(h, "POST", "/auth/register2", body={
             "username": "happy_agent",
             "password": "strong-password-123!",
             "challenge_id": cid,
@@ -160,14 +160,14 @@ class TestRegistration:
     def test_duplicate_username(self, dynamodb):
         from handlers import profile as h
         cid1, ans1 = self._get_challenge_and_answer(dynamodb, h)
-        _call_handler(h, "POST", "/auth/register", body={
+        _call_handler(h, "POST", "/auth/register2", body={
             "username": "dupe_agent",
             "password": "strong-password-123!",
             "challenge_id": cid1,
             "answer": ans1,
         })
         cid2, ans2 = self._get_challenge_and_answer(dynamodb, h)
-        status, body = _call_handler(h, "POST", "/auth/register", body={
+        status, body = _call_handler(h, "POST", "/auth/register2", body={
             "username": "dupe_agent",
             "password": "another-password-123!",
             "challenge_id": cid2,
@@ -178,7 +178,7 @@ class TestRegistration:
     def test_bad_challenge_answer(self, dynamodb):
         from handlers import profile as h
         cid, answer = self._get_challenge_and_answer(dynamodb, h)
-        status, _ = _call_handler(h, "POST", "/auth/register", body={
+        status, _ = _call_handler(h, "POST", "/auth/register2", body={
             "username": "bad_answer_agent",
             "password": "strong-password-123!",
             "challenge_id": cid,
@@ -189,7 +189,7 @@ class TestRegistration:
     def test_weak_password(self, dynamodb):
         from handlers import profile as h
         cid, answer = self._get_challenge_and_answer(dynamodb, h)
-        status, _ = _call_handler(h, "POST", "/auth/register", body={
+        status, _ = _call_handler(h, "POST", "/auth/register2", body={
             "username": "weak_pw_agent",
             "password": "short",
             "challenge_id": cid,
@@ -211,7 +211,7 @@ class TestLogin:
         cid = ch["challenge_id"]
         item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
         answer = int(item["expected_answer"])
-        _, body = _call_handler(handler, "POST", "/auth/register", body={
+        _, body = _call_handler(handler, "POST", "/auth/register2", body={
             "username": username,
             "password": "secure-login-pass-123!",
             "challenge_id": cid,
@@ -268,7 +268,7 @@ class TestProfileUpdate:
         cid = ch["challenge_id"]
         item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
         answer = int(item["expected_answer"])
-        _, reg = _call_handler(handler, "POST", "/auth/register", body={
+        _, reg = _call_handler(handler, "POST", "/auth/register2", body={
             "username": "profile_agent",
             "password": "secure-profile-pass-123!",
             "challenge_id": cid,
@@ -314,7 +314,7 @@ class TestPasswordChange:
         cid = ch["challenge_id"]
         item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
         answer = int(item["expected_answer"])
-        _, reg = _call_handler(handler, "POST", "/auth/register", body={
+        _, reg = _call_handler(handler, "POST", "/auth/register2", body={
             "username": "pwchange_agent",
             "password": "old-password-secure-123!",
             "challenge_id": cid,
@@ -362,7 +362,7 @@ class TestPublicProfileLookup:
         cid = ch["challenge_id"]
         item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
         answer = int(item["expected_answer"])
-        _call_handler(handler, "POST", "/auth/register", body={
+        _call_handler(handler, "POST", "/auth/register2", body={
             "username": "public_agent",
             "password": "secure-public-pass-123!",
             "challenge_id": cid,
@@ -447,7 +447,7 @@ class TestMigration:
         cid = ch["challenge_id"]
         item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
         answer = int(item["expected_answer"])
-        _call_handler(h, "POST", "/auth/register", body={
+        _call_handler(h, "POST", "/auth/register2", body={
             "username": "taken_name",
             "password": "secure-password-123!",
             "challenge_id": cid,

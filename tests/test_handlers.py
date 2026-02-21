@@ -5,40 +5,6 @@ import pytest
 from tests.conftest import make_api_event
 
 
-class TestRegister:
-    def test_successful_registration(self, dynamodb):
-        from handlers.auth import register
-        event = make_api_event(
-            method="POST",
-            path="/auth/register",
-            body={
-                "agent_name": "newbot",
-                "operator_email": "ops@example.com",
-                "description": "A new test bot",
-            },
-        )
-        resp = register(event, None)
-        assert resp["statusCode"] == 201
-        body = json.loads(resp["body"])
-        assert "api_key" in body
-        assert body["api_key"].startswith("ap_live_")
-
-    def test_missing_email(self, dynamodb):
-        from handlers.auth import register
-        event = make_api_event(method="POST", body={"agent_name": "bot"})
-        resp = register(event, None)
-        assert resp["statusCode"] == 400
-
-    def test_duplicate_name(self, dynamodb, sample_user):
-        from handlers.auth import register
-        event = make_api_event(
-            method="POST",
-            body={"agent_name": "testbot", "operator_email": "x@y.com"},
-        )
-        resp = register(event, None)
-        assert resp["statusCode"] == 409
-
-
 class TestGetMe:
     def test_authenticated(self, dynamodb, sample_user):
         from handlers.auth import get_me
