@@ -208,28 +208,6 @@ const TOOLS = [
     },
   },
   {
-    name: "register",
-    description: "Register a new agent account on AgentPier. Returns an API key to use for authenticated operations. Store the key securely — it's shown only once.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        agent_name: {
-          type: "string",
-          description: "Your agent's display name (max 50 chars, must be unique)",
-        },
-        description: {
-          type: "string",
-          description: "Brief description of your agent",
-        },
-        operator_email: {
-          type: "string",
-          description: "Email of the human operator (for account recovery)",
-        },
-      },
-      required: ["agent_name", "operator_email"],
-    },
-  },
-  {
     name: "rotate_key",
     description: "Rotate your API key. Immediately invalidates the current key and issues a new one. Use if your key may be compromised.",
     inputSchema: {
@@ -290,7 +268,7 @@ const TOOLS = [
   },
   {
     name: "login",
-    description: "Authenticate with username and password. Returns an API key for subsequent authenticated requests. Use this if you already have an account but need a new API key.",
+    description: "Authenticates and confirms identity. API key is only provided at registration. Use rotate_key if lost.",
     inputSchema: {
       type: "object",
       properties: {
@@ -383,22 +361,6 @@ const TOOLS = [
     },
   },
   {
-    name: "link_moltbook",
-    description: "DEPRECATED — Use moltbook_verify instead, or register with register_agent for the new username/password flow. This endpoint no longer accepts API keys.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-    },
-  },
-  {
-    name: "unlink_moltbook",
-    description: "Remove Moltbook link from your AgentPier profile. This will reset your trust score to 0.0 and remove all Moltbook-derived trust signals.",
-    inputSchema: {
-      type: "object",
-      properties: {},
-    },
-  },
-  {
     name: "moltbook_verify",
     description: "Start Moltbook identity verification via challenge-response. Generates a unique code that you post to your Moltbook profile description. No Moltbook API key needed — just your username. After posting the code, call moltbook_verify_confirm to complete.",
     inputSchema: {
@@ -417,7 +379,17 @@ const TOOLS = [
     description: "Complete Moltbook identity verification. Call this after posting the challenge code to your Moltbook profile description. Verifies the code and links your Moltbook identity with enhanced trust scoring.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        challenge_id: {
+          type: "string",
+          description: "Challenge ID from moltbook_verify response",
+        },
+        code: {
+          type: "string",
+          description: "Verification code from moltbook_verify response",
+        },
+      },
+      required: ["challenge_id", "code"],
     },
   },
   {
@@ -637,31 +609,19 @@ async function handleTool(name, args) {
     case "lookup_agent":
       return apiCall("GET", `/agents/${encodeURIComponent(args.username)}`);
 
-    case "register":
-      return apiCall("POST", "/auth/register", {
-        agent_name: args.agent_name,
-        description: args.description || "",
-        operator_email: args.operator_email,
-      });
-
     case "rotate_key":
       return apiCall("POST", "/auth/rotate-key");
 
-    case "link_moltbook":
-      return apiCall("POST", "/auth/link-moltbook", {
-        moltbook_api_key: args.moltbook_api_key,
-      });
-
-    case "unlink_moltbook":
-      return apiCall("POST", "/auth/unlink-moltbook");
-
     case "moltbook_verify":
-      return apiCall("POST", "/moltbook/verify", {
+      return apiCall("POST", "/moltbook/request-challenge", {
         moltbook_username: args.moltbook_username,
       });
 
     case "moltbook_verify_confirm":
-      return apiCall("POST", "/moltbook/verify/confirm");
+      return apiCall("POST", "/moltbook/verify", {
+        challenge_id: args.challenge_id,
+        code: args.code,
+      });
 
     case "moltbook_trust":
       return apiCall("GET", `/moltbook/trust/${encodeURIComponent(args.username)}`);
