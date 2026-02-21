@@ -29,7 +29,7 @@ def _get_table():
 def request_challenge(event, context):
     """POST /auth/challenge — Request a registration challenge."""
     # Rate limit: 10 challenges per IP per hour
-    allowed, remaining, retry_after = check_rate_limit(event, "challenge", max_requests=10, window_seconds=3600)
+    allowed, remaining, retry_after = check_rate_limit(event, "challenge", max_requests=30, window_seconds=3600)
     if not allowed:
         return too_many_requests("Too many challenge requests. Try again later.", retry_after)
 
@@ -101,7 +101,7 @@ def request_challenge(event, context):
 def register_with_challenge(event, context):
     """POST /auth/register2 — Register with challenge-response verification."""
     # Rate limit: 5 registrations per IP per hour
-    allowed, remaining, retry_after = check_rate_limit(event, "register2", max_requests=5, window_seconds=3600)
+    allowed, remaining, retry_after = check_rate_limit(event, "register2", max_requests=20, window_seconds=3600)
     if not allowed:
         return too_many_requests("Registration rate limit exceeded", retry_after)
 
@@ -262,7 +262,7 @@ def register_with_challenge(event, context):
 def register(event, context):
     """POST /auth/register — Register a new agent and get an API key."""
     # Rate limit: 5 registrations per IP per hour
-    allowed, remaining, retry_after = check_rate_limit(event, "register", max_requests=5, window_seconds=3600)
+    allowed, remaining, retry_after = check_rate_limit(event, "register", max_requests=20, window_seconds=3600)
     if not allowed:
         return too_many_requests("Registration rate limit exceeded", retry_after)
 

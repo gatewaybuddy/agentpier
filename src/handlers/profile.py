@@ -173,7 +173,7 @@ def login(event, context):
         return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
 
     # Rate limit: 10 login attempts per IP per minute
-    allowed, remaining, retry_after = check_rate_limit(event, "login", max_requests=10, window_seconds=60)
+    allowed, remaining, retry_after = check_rate_limit(event, "login", max_requests=20, window_seconds=60)
     if not allowed:
         return too_many_requests("Login rate limit exceeded", retry_after)
 
