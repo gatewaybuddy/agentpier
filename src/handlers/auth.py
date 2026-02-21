@@ -236,7 +236,7 @@ def register_with_challenge(event, context):
     if contact_method:
         user_item["contact_method"] = contact_method
 
-    # Create API key record (store raw key for login retrieval)
+    # Create API key record (hash only - no raw key storage)
     key_item = {
         "PK": f"USER#{user_id}",
         "SK": f"APIKEY#{key_hash[:16]}",
@@ -244,7 +244,6 @@ def register_with_challenge(event, context):
         "GSI2SK": now,
         "user_id": user_id,
         "key_hash": key_hash,
-        "api_key_raw": raw_key,
         "permissions": ["read", "write"],
         "created_at": now,
     }
@@ -319,7 +318,7 @@ def register(event, context):
         "updated_at": now,
     }
 
-    # Create API key record (for lookup)
+    # Create API key record (hash only - no raw key storage)
     key_item = {
         "PK": f"USER#{user_id}",
         "SK": f"APIKEY#{key_hash[:16]}",

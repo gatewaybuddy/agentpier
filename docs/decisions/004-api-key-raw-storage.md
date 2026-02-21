@@ -1,7 +1,7 @@
 # ADR-004: Store Raw API Key for Login Retrieval
 
 **Date**: 2026-02-21  
-**Status**: Accepted  
+**Status**: Superseded (by ADR-005)  
 **Context**: Phase 3A Generic Profiles
 
 ## Decision
@@ -26,3 +26,7 @@ The alternative (rotate key on every login) was rejected because it would invali
 1. **Rotate key on login** — rejected: breaks existing integrations
 2. **Don't support login key retrieval** — rejected: defeats the purpose of username/password flow
 3. **Encrypt raw key with KMS** — future enhancement if security review requires it
+
+## Update (2026-02-21)
+
+This decision has been **superseded by ADR-005**. The security risk of storing raw API keys outweighed the convenience benefit. Login now returns success confirmation only, and lost keys must be rotated via `POST /auth/rotate-key`.

@@ -159,22 +159,7 @@ def _lookup_user_by_username(table, username: str) -> dict | None:
     return None
 
 
-def _get_user_api_key_raw(table, user_id: str) -> str | None:
-    """Retrieve the raw API key for a user if stored.
-    
-    NOTE: For login to return the existing key (design decision #1 — no rotation),
-    the registration handler MUST store `api_key_raw` on the APIKEY record.
-    If raw key is not stored, login cannot return it.
-    """
-    resp = table.query(
-        KeyConditionExpression=Key("PK").eq(f"USER#{user_id}"),
-    )
-    for item in resp.get("Items", []):
-        if item["SK"].startswith("APIKEY#"):
-            raw = item.get("api_key_raw")
-            if raw:
-                return raw
-    return None
+# REMOVED: _get_user_api_key_raw function (security fix - no raw API key storage)
 
 
 # ============================================================
@@ -182,7 +167,7 @@ def _get_user_api_key_raw(table, user_id: str) -> str | None:
 # ============================================================
 
 def login(event, context):
-    """POST /auth/login — Authenticate with username + password, return existing API key."""
+    """POST /auth/login — Authenticate with username + password, return success confirmation."""
     # Auth failure lockout
     if check_auth_failures(event):
         return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
@@ -223,15 +208,6 @@ def login(event, context):
 
     user_id = user["user_id"]
 
-    # Return existing API key (design decision #1: do NOT rotate)
-    raw_key = _get_user_api_key_raw(table, user_id)
-    if not raw_key:
-        return error(
-            "API key cannot be retrieved. Use POST /auth/rotate-key with your current key, "
-            "or contact support if you've lost access.",
-            "key_not_retrievable",
-        )
-
     # Update last_active
     now = datetime.now(timezone.utc).isoformat()
     table.update_item(
@@ -240,10 +216,11 @@ def login(event, context):
         ExpressionAttributeValues={":now": now},
     )
 
+    # Return success without API key (security fix)
     return success({
         "user_id": user_id,
-        "api_key": raw_key,
-        "message": "API key returned. All subsequent requests use this key in the Authorization header.",
+        "username": user.get("username"),
+        "note": "API key was provided at registration. Use POST /auth/rotate-key to generate a new one if lost.",
     })
 
 

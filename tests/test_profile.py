@@ -227,8 +227,10 @@ class TestLogin:
             "password": "secure-login-pass-123!",
         })
         assert status == 200
-        assert "api_key" in body
         assert "user_id" in body
+        assert "username" in body
+        assert "note" in body
+        assert "api_key" not in body  # Security fix: no longer returns API key
 
     def test_wrong_password(self, dynamodb):
         from handlers import profile as h
@@ -330,11 +332,13 @@ class TestPasswordChange:
         assert status == 200
 
         # Login with new password should work
-        s2, _ = _call_handler(h, "POST", "/auth/login", body={
+        s2, b2 = _call_handler(h, "POST", "/auth/login", body={
             "username": "pwchange_agent",
             "password": "new-password-secure-456!",
         })
         assert s2 == 200
+        assert "user_id" in b2
+        assert "api_key" not in b2  # Security fix: login no longer returns API key
 
     def test_wrong_old_password(self, dynamodb):
         from handlers import profile as h
@@ -418,6 +422,8 @@ class TestMigration:
             "password": "secure-migrate-pass-123!",
         })
         assert s2 == 200
+        assert "user_id" in b2
+        assert "api_key" not in b2  # Security fix: login no longer returns API key
 
     def test_already_migrated(self, dynamodb, sample_user):
         """Can't migrate twice."""
