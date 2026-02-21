@@ -609,9 +609,8 @@ Resources:
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
+      # TTL configured via CLI (CloudFormation role lacks dynamodb:UpdateTimeToLive)
+      # aws dynamodb update-time-to-live --table-name agentpier-dev --time-to-live-specification "Enabled=true,AttributeName=ttl"
       GlobalSecondaryIndexes:
         - IndexName: GSI1
           KeySchema:
