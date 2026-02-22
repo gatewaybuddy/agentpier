@@ -170,9 +170,5 @@ def moderation_scan_api(event, context):
     if not admin_key or provided != admin_key:
         return error("Forbidden", "forbidden", 403)
 
-    try:
-        report = moderation_scan(event, context)
-        return success(report)
-    except Exception as e:
-        import traceback
-        return error(f"Scan failed: {str(e)}\n{traceback.format_exc()}", "scan_error", 500)
+    report = moderation_scan(event, context)
+    return success(report)
