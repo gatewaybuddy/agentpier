@@ -338,15 +338,21 @@ def get_leaderboard(event, context):
         }
     
     elif leaderboard_type == "recent":
-        # Last 20 catches across all agents
+        # Last 20 catches across all agents, sorted by time
+        # GSI2SK is weight-based, so we query and sort by timestamp instead
         response = table.query(
             IndexName="GSI2",
             KeyConditionExpression=Key("GSI2PK").eq("PIER#LEADERBOARD"),
-            ScanIndexForward=False,  # Most recent first
-            Limit=20
+            ScanIndexForward=False,
+            Limit=100  # Fetch more, then sort by time
         )
+        items = sorted(
+            response.get("Items", []),
+            key=lambda x: int(x.get("timestamp", 0)),
+            reverse=True
+        )[:20]
         entries = []
-        for item in response.get("Items", []):
+        for item in items:
             entries.append({
                 "username": item.get("username", "Unknown Agent"),
                 "catch_name": item.get("catch_name"),
