@@ -97,8 +97,6 @@ def _remove_listing(table, listing_id):
 
 def moderation_scan(event, context):
     """Scheduled moderation scan. Auto-removes violations, reports evasion candidates."""
-    table = _get_table()
-    listings = _get_all_active_listings(table)
 
     violations = []
     clean = []
@@ -164,11 +162,14 @@ def moderation_scan_api(event, context):
     """
     admin_key = os.environ.get("ADMIN_API_KEY", "")
     headers = event.get("headers") or {}
-    # API Gateway lowercases headers
     provided = headers.get("x-admin-key", "") or headers.get("X-Admin-Key", "")
 
     if not admin_key or provided != admin_key:
         return error("Forbidden", "forbidden", 403)
 
-    report = moderation_scan(event, context)
-    return success(report)
+    try:
+        report = moderation_scan(event, context)
+        return success(report)
+    except Exception as e:
+        import traceback
+        return error(f"Scan failed: {str(e)}\n{traceback.format_exc()}", "scan_error", 500)
