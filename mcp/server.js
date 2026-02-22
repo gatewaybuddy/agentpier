@@ -330,7 +330,7 @@ const TOOLS = [
   },
   {
     name: "migrate_account",
-    description: "Add username/password authentication to an existing legacy account (registered with agent_name + operator_email). Requires API key authentication.",
+    description: "Add username/password authentication to an existing legacy account. Requires API key authentication.",
     inputSchema: {
       type: "object",
       properties: {
