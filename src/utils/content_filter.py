@@ -258,7 +258,9 @@ def check_content(text: str) -> tuple[bool, list[str]]:
         stripped = re.sub(r'[^a-zA-Z]', '', normalized).lower()
         _DANGEROUS_SUBSTRINGS = [
             'cocaine', 'heroin', 'fentanyl', 'ketamine', 'oxycontin', 'oxycodone',
+            'drugs', 'meth', 'mdma', 'shrooms', 'psilocybin',
             'csam', 'childporn', 'hitman', 'assassin', 'humantraffick',
+            'sellguns', 'buyguns', 'ghostgun',
         ]
         for term in _DANGEROUS_SUBSTRINGS:
             if term in stripped:
@@ -271,6 +273,21 @@ def check_content(text: str) -> tuple[bool, list[str]]:
                     flagged.append('illegal_drugs')
                 break
     
+    # Ambiguous leet: "0" maps to "o" by default, but could be "u" (dr0gs → drugs)
+    # Try alternate substitutions on the stripped text
+    if not flagged:
+        _LEET_ALT = str.maketrans({"o": "u"})  # covers 0→o→u
+        alt_stripped = re.sub(r'[^a-zA-Z]', '', normalized).lower().translate(_LEET_ALT)
+        for term in _DANGEROUS_SUBSTRINGS:
+            if term in alt_stripped:
+                if term in ('csam', 'childporn', 'humantraffick'):
+                    flagged.append('exploitation')
+                elif term in ('hitman', 'assassin', 'sellguns', 'buyguns', 'ghostgun'):
+                    flagged.append('weapons')
+                else:
+                    flagged.append('illegal_drugs')
+                break
+
     # Also check with spaces between every word-boundary transition
     # "Sellcocaine" won't match \bsell\b but "sell cocaine" will
     if not flagged:

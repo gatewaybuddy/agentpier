@@ -55,11 +55,17 @@ def create_listing(event, context):
     if category not in VALID_CATEGORIES:
         return error(f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category")
 
-    title = body.get("title", "").strip()
+    title = body.get("title", "")
+    if not isinstance(title, str):
+        return error("Title must be a string", "invalid_title")
+    title = title.strip()
     if not title or len(title) > 200:
         return error("Title is required (max 200 chars)", "invalid_title")
 
-    description = body.get("description", "").strip()
+    description = body.get("description", "")
+    if not isinstance(description, str):
+        return error("Description must be a string", "invalid_description")
+    description = description.strip()
     if len(description) > 2000:
         return error("Description max 2000 chars", "invalid_description")
 
@@ -311,6 +317,11 @@ def update_listing(event, context):
     # Allowed update fields
     allowed = {"title", "description", "pricing", "availability", "contact", "tags", "status"}
     updates = {k: v for k, v in body.items() if k in allowed}
+
+    # Type validation on text fields
+    for field in ("title", "description"):
+        if field in updates and not isinstance(updates[field], str):
+            return error(f"{field.capitalize()} must be a string", f"invalid_{field}")
 
     # Content filter on text field updates
     check_title = updates.get("title", existing.get("title", ""))
