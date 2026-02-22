@@ -195,13 +195,32 @@ def calculate_blast_radius(agent_profile: dict, events: list,
     return max(0.0, min(100.0, score))
 
 
+def moltbook_weight(transaction_count: int) -> float:
+    """Calculate dynamic Moltbook weight based on transaction count.
+    
+    As AgentPier transaction count grows, Moltbook weight decreases:
+    - 0 transactions: 30% Moltbook, 70% ACE
+    - 5 transactions: 20% Moltbook, 80% ACE  
+    - 10+ transactions: 10% Moltbook, 90% ACE
+    - 20+ transactions: 5% Moltbook, 95% ACE
+    """
+    if transaction_count >= 20:
+        return 0.05
+    if transaction_count >= 10:
+        return 0.10
+    if transaction_count >= 5:
+        return 0.20
+    return 0.30
+
+
 def calculate_ace_score(agent_profile: dict, trust_events: list,
                         now: Optional[datetime] = None,
-                        moltbook_trust: Optional[float] = None) -> dict:
+                        moltbook_trust: Optional[float] = None,
+                        transaction_count: int = 0) -> dict:
     """Calculate composite ACE-T trust score.
 
-    If moltbook_trust (0.0-1.0) is provided, it's blended in:
-    final = ACE * 0.7 + moltbook * 100 * 0.3
+    If moltbook_trust (0.0-1.0) is provided, it's blended in using dynamic weighting
+    based on transaction_count. More transactions = less Moltbook weight.
 
     Returns dict with score, tier, axis breakdown, and diagnostic info.
     """
@@ -215,9 +234,11 @@ def calculate_ace_score(agent_profile: dict, trust_events: list,
         blast_radius * WEIGHT_BLAST_RADIUS
     )
 
-    # Blend Moltbook trust if available
+    # Blend Moltbook trust if available using dynamic weighting
     if moltbook_trust is not None:
-        composite = composite * 0.7 + (moltbook_trust * 100) * 0.3
+        weight_moltbook = moltbook_weight(transaction_count)
+        weight_ace = 1.0 - weight_moltbook
+        composite = composite * weight_ace + (moltbook_trust * 100) * weight_moltbook
 
     # Cap at 95
     composite = min(95.0, composite)

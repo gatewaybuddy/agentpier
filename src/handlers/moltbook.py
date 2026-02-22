@@ -262,6 +262,24 @@ def moltbook_verify_confirm(event, context):
             "challenge_not_found",
         )
 
+    # Anti-gaming: Check account age (must be at least 7 days old)
+    created_at_str = agent_data.get("created_at", "")
+    account_age_days = 0
+    if created_at_str:
+        try:
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            account_age_days = max(0, (datetime.now(timezone.utc) - created_at).days)
+        except (ValueError, TypeError):
+            pass
+    
+    if account_age_days < 7:
+        return error(
+            "Moltbook account must be at least 7 days old for identity verification",
+            "account_too_new",
+        )
+
     # Verification succeeded! Calculate enhanced trust score
     trust_result = calculate_enhanced_trust_score(profile)
     now = _now_iso()
@@ -273,10 +291,11 @@ def moltbook_verify_confirm(event, context):
         UpdateExpression=(
             "SET moltbook_name = :mn, moltbook_verified = :mv, "
             "moltbook_verified_at = :mvat, moltbook_karma = :mk, "
-            "moltbook_account_age = :maa, moltbook_has_owner = :mho, "
+            "moltbook_account_age = :maa, moltbook_account_created = :mac, "
+            "moltbook_has_owner = :mho, "
             "moltbook_follower_count = :mfc, moltbook_posts_count = :mpc, "
             "moltbook_comments_count = :mcc, moltbook_verification_method = :mvm, "
-            "moltbook_trust_score = :mts, "
+            "moltbook_trust_score = :mts, moltbook_last_refreshed = :mlr, "
             "trust_score = :ts, trust_breakdown = :tb, updated_at = :now"
         ),
         ExpressionAttributeValues={
@@ -285,12 +304,14 @@ def moltbook_verify_confirm(event, context):
             ":mvat": now,
             ":mk": agent_data.get("karma", 0),
             ":maa": agent_data.get("created_at", ""),
+            ":mac": created_at_str,
             ":mho": bool(agent_data.get("owner")),
             ":mfc": int(agent_data.get("follower_count", 0) or 0),
             ":mpc": int(agent_data.get("posts_count", 0) or 0),
             ":mcc": int(agent_data.get("comments_count", 0) or 0),
             ":mvm": "challenge_response",
             ":mts": Decimal(str(trust_result["trust_score"])),
+            ":mlr": now,  # Set last refreshed to now
             ":ts": Decimal(str(trust_result["trust_score"] / 100)),  # normalize to 0-1 for existing field
             ":tb": {k: Decimal(str(v)) for k, v in trust_result["breakdown"].items()},
             ":now": now,

@@ -13,10 +13,11 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
 from utils.response import success, error, not_found
-from utils.ace_scoring import calculate_ace_score
+from utils.ace_scoring import calculate_ace_score, moltbook_weight
 from utils.moltbook import fetch_trust_metrics, calculate_trust_score, MoltbookError
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
+MOLTBOOK_CACHE_TTL_HOURS = 24
 
 
 def _get_table():
@@ -244,6 +245,22 @@ def trust_query(event, context):
     combined_score = trust_score
 
     if moltbook_name:
+        # Check if Moltbook data is stale and needs refreshing
+        should_refresh = False
+        last_refreshed = profile.get("moltbook_last_refreshed")
+        
+        if last_refreshed:
+            try:
+                last_refresh_dt = datetime.fromisoformat(last_refreshed.replace("Z", "+00:00"))
+                if last_refresh_dt.tzinfo is None:
+                    last_refresh_dt = last_refresh_dt.replace(tzinfo=timezone.utc)
+                hours_since_refresh = (datetime.now(timezone.utc) - last_refresh_dt).total_seconds() / 3600
+                should_refresh = hours_since_refresh >= MOLTBOOK_CACHE_TTL_HOURS
+            except (ValueError, TypeError):
+                should_refresh = True  # Invalid timestamp, refresh
+        else:
+            should_refresh = True  # No refresh timestamp, refresh
+
         moltbook_source = {
             "name": moltbook_name,
             "karma": int(profile.get("moltbook_karma", 0)),
@@ -251,24 +268,61 @@ def trust_query(event, context):
             "verified": bool(profile.get("moltbook_verified")),
         }
 
-        # Try to refresh metrics from Moltbook (best-effort)
-        try:
-            moltbook_profile = fetch_trust_metrics(moltbook_name)
-            trust_result = calculate_trust_score(moltbook_profile)
-            moltbook_source["karma"] = trust_result["raw"]["karma"]
-            moltbook_source["age_days"] = trust_result["raw"]["age_days"]
-            moltbook_source["trust_score"] = trust_result["trust_score"]
+        if should_refresh:
+            # Try to refresh metrics from Moltbook
+            try:
+                moltbook_profile = fetch_trust_metrics(moltbook_name)
+                trust_result = calculate_trust_score(moltbook_profile)
+                
+                # Update cached data in DynamoDB
+                now = _now_iso()
+                table.update_item(
+                    Key={"PK": f"USER#{agent_id}", "SK": "META"},
+                    UpdateExpression=(
+                        "SET moltbook_karma = :mk, moltbook_last_refreshed = :mlr, "
+                        "trust_score = :ts, trust_breakdown = :tb"
+                    ),
+                    ExpressionAttributeValues={
+                        ":mk": trust_result["raw"]["karma"],
+                        ":mlr": now,
+                        ":ts": trust_result["trust_score"] / 100,  # normalize to 0-1
+                        ":tb": {k: Decimal(str(v)) for k, v in trust_result["breakdown"].items()},
+                    },
+                )
+                
+                # Update source data
+                moltbook_source["karma"] = trust_result["raw"]["karma"]
+                moltbook_source["age_days"] = trust_result["raw"]["age_days"]
+                moltbook_source["trust_score"] = trust_result["trust_score"]
+                
+            except MoltbookError:
+                # Use cached data if Moltbook is unreachable (don't fail the request)
+                moltbook_source["trust_score"] = trust_score * 100
+                moltbook_source["cached"] = True
+        else:
+            # Use cached data
+            moltbook_source["trust_score"] = trust_score * 100
+            moltbook_source["cached"] = True
 
-            # Blend: 40% AgentPier + 60% Moltbook (Moltbook is bootstrapped identity)
+        # Calculate combined score with dynamic weighting
+        # Count completed transactions for this agent (via GSI2)
+        try:
+            tx_result = table.query(
+                IndexName="GSI2",
+                KeyConditionExpression=Key("GSI2PK").eq(f"AGENT#{agent_id}"),
+                Select="COUNT",
+            )
+            transaction_count = tx_result.get("Count", 0)
+        except Exception:
+            transaction_count = 0
+        if moltbook_source.get("trust_score"):
+            weight_moltbook = moltbook_weight(transaction_count)
+            weight_agentpier = 1.0 - weight_moltbook
             combined_score = round(
-                trust_score * 0.4 + trust_result["trust_score"] * 100 * 0.6,
+                trust_score * 100 * weight_agentpier + moltbook_source["trust_score"] * weight_moltbook,
                 2,
             )
             combined_score = min(95.0, combined_score)
-        except MoltbookError:
-            # Use cached data if Moltbook is unreachable
-            moltbook_source["trust_score"] = trust_score
-            moltbook_source["cached"] = True
 
         sources["moltbook"] = moltbook_source
 
