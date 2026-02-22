@@ -40,7 +40,6 @@ def _call_handler(handler_module, method, path, body=None, headers=None,
         "POST /auth/login": prof.login,
         "PATCH /auth/profile": prof.update_profile,
         "POST /auth/change-password": prof.change_password,
-        "POST /auth/migrate": prof.migrate,
     }
     # Match GET /agents/{username}
     handler_fn = routes.get(route_key)
@@ -403,61 +402,4 @@ class TestPublicProfileLookup:
 # Migration
 # ---------------------------------------------------------------------------
 
-class TestMigration:
-    """POST /auth/migrate — add username/password to legacy accounts"""
-
-    def test_happy_path(self, dynamodb, sample_user):
-        """Legacy user (sample_user) migrates to username/password."""
-        from handlers import profile as h
-        user_id, api_key = sample_user
-        status, body = _call_handler(h, "POST", "/auth/migrate", api_key=api_key, body={
-            "username": "migrated_agent",
-            "password": "secure-migrate-pass-123!",
-        })
-        assert status == 200
-
-        # Should be able to login now
-        s2, b2 = _call_handler(h, "POST", "/auth/login", body={
-            "username": "migrated_agent",
-            "password": "secure-migrate-pass-123!",
-        })
-        assert s2 == 200
-        assert "user_id" in b2
-        assert "api_key" not in b2  # Security fix: login no longer returns API key
-
-    def test_already_migrated(self, dynamodb, sample_user):
-        """Can't migrate twice."""
-        from handlers import profile as h
-        user_id, api_key = sample_user
-        _call_handler(h, "POST", "/auth/migrate", api_key=api_key, body={
-            "username": "migrated_once",
-            "password": "secure-migrate-pass-123!",
-        })
-        status, _ = _call_handler(h, "POST", "/auth/migrate", api_key=api_key, body={
-            "username": "migrated_twice",
-            "password": "secure-migrate-pass-456!",
-        })
-        assert status in (400, 409)
-
-    def test_username_taken(self, dynamodb, sample_user):
-        """Can't migrate to an already-taken username."""
-        from handlers import profile as h
-        # First, register a user with the target username
-        _, ch = _call_handler(h, "POST", "/auth/challenge", body={"username": _unique_challenge_username()})
-        cid = ch["challenge_id"]
-        item = dynamodb.get_item(Key={"PK": f"CHALLENGE#{cid}", "SK": "META"}).get("Item")
-        answer = int(item["expected_answer"])
-        _call_handler(h, "POST", "/auth/register2", body={
-            "username": "taken_name",
-            "password": "secure-password-123!",
-            "challenge_id": cid,
-            "answer": answer,
-        })
-
-        # Now try to migrate to same username
-        user_id, api_key = sample_user
-        status, _ = _call_handler(h, "POST", "/auth/migrate", api_key=api_key, body={
-            "username": "taken_name",
-            "password": "secure-migrate-pass-123!",
-        })
-        assert status == 409
+    # TestMigration removed — migrate endpoint removed (pre-launch cleanup)

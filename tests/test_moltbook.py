@@ -209,37 +209,22 @@ class TestFetchTrustMetrics:
 # 3. Integration tests for link_moltbook handler
 # ---------------------------------------------------------------------------
 
-class TestLinkMoltbook:
-    """link_moltbook is deprecated — should return 410 for all calls."""
-
-    def test_deprecated_returns_410(self, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-
-        _, raw_key = sample_user
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-        assert resp["statusCode"] == 410
-        body = json.loads(resp["body"])
-        assert body["error"] == "deprecated_endpoint"
+    # TestLinkMoltbook removed — link_moltbook endpoint removed (pre-launch cleanup)
 
 
 # ---------------------------------------------------------------------------
-# 4. Integration tests for unlink_moltbook handler
+# 4. Integration tests for moltbook_unlink handler
 # ---------------------------------------------------------------------------
 
-class TestUnlinkMoltbook:
-    """Integration tests: unlink_moltbook handler."""
+class TestMoltbookUnlink:
+    """Integration tests: moltbook_unlink handler (POST /moltbook/unlink)."""
 
     def test_successful_unlink(self, dynamodb, sample_user):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         user_id, raw_key = sample_user
 
-        # Directly set moltbook fields in DB (link_moltbook is deprecated)
+        # Directly set moltbook fields in DB
         dynamodb.update_item(
             Key={"PK": f"USER#{user_id}", "SK": "META"},
             UpdateExpression=(
@@ -254,10 +239,10 @@ class TestUnlinkMoltbook:
 
         # Now unlink
         unlink_event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
             api_key=raw_key,
         )
-        resp = unlink_moltbook(unlink_event, None)
+        resp = moltbook_unlink(unlink_event, None)
 
         assert resp["statusCode"] == 200
         body = json.loads(resp["body"])
@@ -273,26 +258,26 @@ class TestUnlinkMoltbook:
         assert "moltbook_name" not in item
 
     def test_not_linked_error(self, dynamodb, sample_user):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         _, raw_key = sample_user
         event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
             api_key=raw_key,
         )
-        resp = unlink_moltbook(event, None)
+        resp = moltbook_unlink(event, None)
 
         assert resp["statusCode"] == 400
         body = json.loads(resp["body"])
         assert body["error"] == "not_linked"
 
     def test_unauthenticated(self, dynamodb):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
         )
-        resp = unlink_moltbook(event, None)
+        resp = moltbook_unlink(event, None)
         assert resp["statusCode"] == 401
 
 
@@ -351,3 +336,205 @@ class TestGetMeWithMoltbook:
         assert body["moltbook_linked"] is False
         assert "moltbook_name" not in body
         assert "moltbook_karma" not in body
+
+
+# ---------------------------------------------------------------------------
+# 6. Tests for anti-gaming account age verification
+# ---------------------------------------------------------------------------
+
+class TestAntiGaming:
+    """Tests for anti-gaming measures in Moltbook verification."""
+
+    @patch("handlers.moltbook.fetch_trust_metrics")
+    def test_account_too_new_rejected(self, mock_fetch, dynamodb, sample_user):
+        """Account less than 7 days old should be rejected."""
+        from handlers.moltbook import moltbook_verify_confirm
+        
+        user_id, raw_key = sample_user
+        
+        # Clean up any existing challenge and moltbook verification
+        try:
+            dynamodb.delete_item(Key={"PK": f"USER#{user_id}", "SK": "MOLTBOOK_CHALLENGE"})
+        except:
+            pass  # Ignore if doesn't exist
+        
+        # Remove any existing moltbook verification
+        try:
+            dynamodb.update_item(
+                Key={"PK": f"USER#{user_id}", "SK": "META"},
+                UpdateExpression=(
+                    "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
+                    "moltbook_karma, moltbook_account_age, moltbook_has_owner"
+                ),
+            )
+        except:
+            pass  # Ignore if fields don't exist
+        
+        # Set up a pending challenge
+        now = datetime.now(timezone.utc)
+        
+        dynamodb.put_item(Item={
+            "PK": f"USER#{user_id}",
+            "SK": "MOLTBOOK_CHALLENGE",
+            "challenge_code": "agentpier-verify-test123",
+            "moltbook_username": "new-agent",
+            "created_at": now.isoformat(),
+            "expires_at": str(int(now.timestamp()) + 1800),
+        })
+        
+        # Mock Moltbook profile with account created 3 days ago
+        three_days_ago = (now - timedelta(days=3)).isoformat()
+        mock_fetch.return_value = {
+            "agent": {
+                "name": "new-agent",
+                "description": "agentpier-verify-test123",  # Challenge code present
+                "karma": 100,
+                "created_at": three_days_ago,
+                "is_claimed": True,
+                "owner": "owner123",
+            }
+        }
+        
+        event = make_api_event(
+            method="POST", path="/moltbook/verify/confirm",
+            api_key=raw_key,
+        )
+        
+        resp = moltbook_verify_confirm(event, None)
+        
+        assert resp["statusCode"] == 400
+        body = json.loads(resp["body"])
+        assert body["error"] == "account_too_new"
+        assert "7 days old" in body["message"]
+
+    @patch("handlers.moltbook.fetch_trust_metrics")
+    def test_account_exactly_seven_days_accepted(self, mock_fetch, dynamodb, sample_user):
+        """Account exactly 7 days old should be accepted."""
+        from handlers.moltbook import moltbook_verify_confirm
+        
+        user_id, raw_key = sample_user
+        
+        # Clean up any existing challenge and moltbook verification
+        try:
+            dynamodb.delete_item(Key={"PK": f"USER#{user_id}", "SK": "MOLTBOOK_CHALLENGE"})
+        except:
+            pass  # Ignore if doesn't exist
+        
+        # Remove any existing moltbook verification
+        try:
+            dynamodb.update_item(
+                Key={"PK": f"USER#{user_id}", "SK": "META"},
+                UpdateExpression=(
+                    "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
+                    "moltbook_karma, moltbook_account_age, moltbook_has_owner"
+                ),
+            )
+        except:
+            pass  # Ignore if fields don't exist
+        
+        # Set up a pending challenge
+        now = datetime.now(timezone.utc)
+        
+        dynamodb.put_item(Item={
+            "PK": f"USER#{user_id}",
+            "SK": "MOLTBOOK_CHALLENGE",
+            "challenge_code": "agentpier-verify-test456",
+            "moltbook_username": "seven-day-agent",
+            "created_at": now.isoformat(),
+            "expires_at": str(int(now.timestamp()) + 1800),
+        })
+        
+        # Mock Moltbook profile with account created exactly 7 days ago
+        seven_days_ago = (now - timedelta(days=7)).isoformat()
+        mock_fetch.return_value = {
+            "agent": {
+                "name": "seven-day-agent",
+                "description": "agentpier-verify-test456",  # Challenge code present
+                "karma": 100,
+                "created_at": seven_days_ago,
+                "is_claimed": True,
+                "owner": "owner123",
+                "follower_count": 10,
+                "posts_count": 5,
+                "comments_count": 20,
+                "is_active": True,
+            }
+        }
+        
+        event = make_api_event(
+            method="POST", path="/moltbook/verify/confirm",
+            api_key=raw_key,
+        )
+        
+        resp = moltbook_verify_confirm(event, None)
+        
+        assert resp["statusCode"] == 200
+        body = json.loads(resp["body"])
+        assert body["verified"] is True
+        assert body["moltbook_username"] == "seven-day-agent"
+
+    @patch("handlers.moltbook.fetch_trust_metrics")
+    def test_account_old_enough_accepted(self, mock_fetch, dynamodb, sample_user):
+        """Account older than 7 days should be accepted."""
+        from handlers.moltbook import moltbook_verify_confirm
+        
+        user_id, raw_key = sample_user
+        
+        # Clean up any existing challenge and moltbook verification
+        try:
+            dynamodb.delete_item(Key={"PK": f"USER#{user_id}", "SK": "MOLTBOOK_CHALLENGE"})
+        except:
+            pass  # Ignore if doesn't exist
+        
+        # Remove any existing moltbook verification
+        try:
+            dynamodb.update_item(
+                Key={"PK": f"USER#{user_id}", "SK": "META"},
+                UpdateExpression=(
+                    "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
+                    "moltbook_karma, moltbook_account_age, moltbook_has_owner"
+                ),
+            )
+        except:
+            pass  # Ignore if fields don't exist
+        
+        # Set up a pending challenge
+        now = datetime.now(timezone.utc)
+        
+        dynamodb.put_item(Item={
+            "PK": f"USER#{user_id}",
+            "SK": "MOLTBOOK_CHALLENGE",
+            "challenge_code": "agentpier-verify-test789",
+            "moltbook_username": "old-agent",
+            "created_at": now.isoformat(),
+            "expires_at": str(int(now.timestamp()) + 1800),
+        })
+        
+        # Mock Moltbook profile with account created 30 days ago
+        thirty_days_ago = (now - timedelta(days=30)).isoformat()
+        mock_fetch.return_value = {
+            "agent": {
+                "name": "old-agent",
+                "description": "agentpier-verify-test789",  # Challenge code present
+                "karma": 500,
+                "created_at": thirty_days_ago,
+                "is_claimed": True,
+                "owner": "owner456",
+                "follower_count": 50,
+                "posts_count": 25,
+                "comments_count": 100,
+                "is_active": True,
+            }
+        }
+        
+        event = make_api_event(
+            method="POST", path="/moltbook/verify/confirm",
+            api_key=raw_key,
+        )
+        
+        resp = moltbook_verify_confirm(event, None)
+        
+        assert resp["statusCode"] == 200
+        body = json.loads(resp["body"])
+        assert body["verified"] is True
+        assert body["moltbook_username"] == "old-agent"
