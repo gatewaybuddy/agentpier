@@ -97,6 +97,8 @@ def _remove_listing(table, listing_id):
 
 def moderation_scan(event, context):
     """Scheduled moderation scan. Auto-removes violations, reports evasion candidates."""
+    table = _get_table()
+    listings = _get_all_active_listings(table)
 
     violations = []
     clean = []
