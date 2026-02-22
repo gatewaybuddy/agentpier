@@ -530,6 +530,78 @@ Resources:
             Method: POST
 
   # ============================================
+  # Fishing Mini-Game API
+  # ============================================
+
+  CastLineFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-cast-line-${Stage}
+      Handler: handlers.fishing.cast_line
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /pier/cast
+            Method: POST
+
+  GetLeaderboardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-leaderboard-${Stage}
+      Handler: handlers.fishing.get_leaderboard
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /pier/leaderboard
+            Method: GET
+
+  GetTackleBoxFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-tackle-box-${Stage}
+      Handler: handlers.fishing.get_tackle_box
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /pier/tackle-box
+            Method: GET
+
+  GetPierStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-pier-stats-${Stage}
+      Handler: handlers.fishing.get_pier_stats
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /pier/stats
+            Method: GET
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:
