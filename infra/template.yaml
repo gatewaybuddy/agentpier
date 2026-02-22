@@ -12,6 +12,7 @@ Globals:
         TABLE_NAME: !Ref AgentPierTable
         STAGE: !Ref Stage
         CURSOR_SECRET: !Ref CursorSecret
+        DEPLOY_VERSION: "2026-02-21-v2"
 
 Parameters:
   Stage:

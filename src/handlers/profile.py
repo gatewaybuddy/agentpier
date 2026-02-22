@@ -41,19 +41,26 @@ def _get_table():
 
 
 def _hash_password(password: str) -> str:
-    """Hash a password with argon2id. Falls back to bcrypt if argon2 unavailable."""
-    try:
-        from argon2 import PasswordHasher
-        ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
-        return ph.hash(password)
-    except ImportError:
-        import bcrypt
-        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    """Hash a password with scrypt (stdlib, no native deps)."""
+    import hashlib, os, base64
+    salt = os.urandom(16)
+    dk = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
+    return "$scrypt$" + base64.b64encode(salt).decode() + "$" + base64.b64encode(dk).decode()
 
 
 def _verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against a stored hash (argon2id or bcrypt)."""
-    if password_hash.startswith("$argon2"):
+    """Verify a password against a stored hash (scrypt, argon2, or bcrypt)."""
+    import hashlib, base64
+    if password_hash.startswith("$scrypt$"):
+        parts = password_hash.split("$")
+        # Format: $scrypt$<salt_b64>$<dk_b64>
+        if len(parts) != 4:
+            return False
+        salt = base64.b64decode(parts[2])
+        expected_dk = base64.b64decode(parts[3])
+        dk = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
+        return dk == expected_dk
+    elif password_hash.startswith("$argon2"):
         try:
             from argon2 import PasswordHasher
             from argon2.exceptions import VerifyMismatchError

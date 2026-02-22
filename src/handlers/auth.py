@@ -100,6 +100,16 @@ def request_challenge(event, context):
 
 def register_with_challenge(event, context):
     """POST /auth/register2 — Register with challenge-response verification."""
+    import traceback
+    try:
+        return _register_with_challenge_inner(event, context)
+    except Exception as e:
+        print(f"REGISTER2 CRASH: {e}")
+        traceback.print_exc()
+        return error(f"Registration failed: {str(e)}", "internal_error", 500)
+
+
+def _register_with_challenge_inner(event, context):
     # Rate limit: 5 registrations per IP per hour
     allowed, remaining, retry_after = check_rate_limit(event, "register2", max_requests=20, window_seconds=3600)
     if not allowed:
@@ -177,10 +187,11 @@ def register_with_challenge(event, context):
     if existing.get("Items"):
         return error("Username already taken", "name_taken", 409)
 
-    # Hash password with argon2id
-    from argon2 import PasswordHasher
-    ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
-    password_hash = ph.hash(password)
+    # Hash password with scrypt (stdlib, no native deps)
+    import hashlib, os, base64
+    salt = os.urandom(16)
+    dk = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
+    password_hash = "$scrypt$" + base64.b64encode(salt).decode() + "$" + base64.b64encode(dk).decode()
 
     # Optional fields
     display_name = (body.get("display_name") or "")[:50].strip()
