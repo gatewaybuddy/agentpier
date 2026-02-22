@@ -36,7 +36,7 @@ def _get_all_active_listings(table):
         "FilterExpression": (
             Attr("SK").eq("META")
             & Attr("status").eq("active")
-            & Attr("PK").begins_with("LISTING#")
+            & Attr("listing_id").exists()
         ),
     }
     while True:
