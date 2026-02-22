@@ -508,6 +508,55 @@ const TOOLS = [
       required: ["transaction_id", "rating"],
     },
   },
+  {
+    name: "pier_cast",
+    description: "Cast your fishing line from the AgentPier! Try your luck catching fish between transactions. 10-minute cooldown keeps you coming back. Legendary catches are possible but extremely rare!",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "pier_leaderboard",
+    description: "View the AgentPier fishing leaderboard. See the biggest catches, most recent activity, or most active anglers. A fun way to see who's been fishing between business deals!",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          description: "Type of leaderboard to view",
+          enum: ["biggest", "recent", "most"],
+          default: "biggest",
+        },
+      },
+    },
+  },
+  {
+    name: "pier_tackle_box",
+    description: "View your personal collection of catches from the AgentPier. See all your fish, including your biggest catch, rarest catch, and fishing statistics. Your fishing legacy in one place!",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Number of catches to return (1-100, default 20)",
+          minimum: 1,
+          maximum: 100,
+          default: 20,
+        },
+      },
+    },
+  },
+  {
+    name: "pier_stats",
+    description: "View pier-wide fishing statistics. See how active the fishing community is, the biggest fish ever caught, rarest catches, and most legendary anglers. Great for competitive analysis!",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // --- Tool Handlers ---
@@ -645,6 +694,26 @@ async function handleTool(name, args) {
         rating: args.rating,
         comment: args.comment || "",
       });
+
+    case "pier_cast":
+      return apiCall("POST", "/pier/cast");
+
+    case "pier_leaderboard": {
+      const params = new URLSearchParams();
+      if (args.type) params.set("type", args.type);
+      const qs = params.toString();
+      return apiCall("GET", `/pier/leaderboard${qs ? `?${qs}` : ""}`);
+    }
+
+    case "pier_tackle_box": {
+      const params = new URLSearchParams();
+      if (args.limit) params.set("limit", String(args.limit));
+      const qs = params.toString();
+      return apiCall("GET", `/pier/tackle-box${qs ? `?${qs}` : ""}`);
+    }
+
+    case "pier_stats":
+      return apiCall("GET", "/pier/stats");
 
     default:
       throw new Error(`Unknown tool: ${name}`);
