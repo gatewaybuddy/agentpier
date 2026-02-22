@@ -420,7 +420,7 @@ def get_tackle_box(event, context):
     params = event.get("queryStringParameters") or {}
     
     try:
-        limit = min(int(params.get("limit", "20")), 100)
+        limit = max(1, min(int(params.get("limit", "20")), 100))
     except (ValueError, TypeError):
         limit = 20
     

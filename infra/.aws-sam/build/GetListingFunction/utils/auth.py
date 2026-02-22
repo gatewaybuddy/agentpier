@@ -30,6 +30,7 @@ def authenticate(event: dict) -> dict | None:
     """Authenticate a request by API key.
     
     Returns the user record if valid, None if not.
+    Sets event['_auth_failure_reason'] for better error messages.
     """
     headers = event.get("headers", {}) or {}
     # Support both X-API-Key header and Authorization: Bearer

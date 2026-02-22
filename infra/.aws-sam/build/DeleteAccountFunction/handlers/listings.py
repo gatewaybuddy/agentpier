@@ -13,6 +13,7 @@ from utils.response import success, error, not_found, unauthorized
 from utils.auth import authenticate
 from utils.content_filter import check_listing_content, log_content_violation, get_user_violation_count
 from utils.rate_limit import get_client_ip
+from utils.pagination import sign_cursor, verify_cursor
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -20,10 +21,9 @@ FREE_LISTING_LIMIT = 3  # Free listings per account
 
 VALID_TYPES = {"service", "product", "agent_skill", "consulting"}
 VALID_CATEGORIES = {
-    "plumbing", "electrical", "hvac", "landscaping", "cleaning",
-    "auto_repair", "it_support", "consulting", "legal", "accounting",
-    "photography", "catering", "tutoring", "pet_care", "home_repair",
-    "other",
+    "code_review", "research", "automation", "monitoring", "content_creation",
+    "security", "infrastructure", "data_processing", "translation", "trading",
+    "consulting", "design", "testing", "devops", "other",
 }
 
 
@@ -55,11 +55,17 @@ def create_listing(event, context):
     if category not in VALID_CATEGORIES:
         return error(f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category")
 
-    title = body.get("title", "").strip()
+    title = body.get("title", "")
+    if not isinstance(title, str):
+        return error("Title must be a string", "invalid_title")
+    title = title.strip()
     if not title or len(title) > 200:
         return error("Title is required (max 200 chars)", "invalid_title")
 
-    description = body.get("description", "").strip()
+    description = body.get("description", "")
+    if not isinstance(description, str):
+        return error("Description must be a string", "invalid_description")
+    description = description.strip()
     if len(description) > 2000:
         return error("Description max 2000 chars", "invalid_description")
 
@@ -146,8 +152,10 @@ def create_listing(event, context):
         "contact": body.get("contact", {}),
         "tags": clean_tags,
         "posted_by": user_id,
-        "agent_name": user.get("agent_name", ""),
+        "agent_name": user.get("username") or user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),
+        "moltbook_verified": bool(user.get("moltbook_verified", False)),
+        "moltbook_name": user.get("moltbook_name", "") if user.get("moltbook_verified") else "",
         "trust_score": Decimal("0.0"),
         "status": "active",
         "created_at": now,
@@ -156,10 +164,17 @@ def create_listing(event, context):
 
     table.put_item(Item=item)
 
+    # Update user's listing_count
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression="ADD listing_count :inc",
+        ExpressionAttributeValues={":inc": 1}
+    )
+
     return success({
         "id": listing_id,
         "status": "active",
-        "trust_score": Decimal("0.0"),
+        "trust_score": 0.0,
         "created_at": now,
         "url": f"https://agentpier.io/listing/{listing_id}",
     }, 201)
@@ -184,6 +199,10 @@ def get_listing(event, context):
     # Strip internal fields from response
     for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
         item.pop(key, None)
+    
+    # Convert Decimal trust_score to float
+    if "trust_score" in item:
+        item["trust_score"] = float(item["trust_score"])
 
     return success(item)
 
@@ -227,18 +246,16 @@ def search_listings(event, context):
     }
 
     if cursor:
-        import base64
-        try:
-            decoded = json.loads(base64.b64decode(cursor).decode())
-            # Validate cursor has expected GSI1 keys only
-            if not isinstance(decoded, dict) or "GSI1PK" not in decoded:
-                return error("Invalid pagination cursor", "invalid_cursor")
-            # Only allow keys that belong to the queried category
-            if decoded.get("GSI1PK") != category:
-                return error("Invalid pagination cursor", "invalid_cursor")
-            query_kwargs["ExclusiveStartKey"] = decoded
-        except Exception:
+        # Verify the signed cursor
+        decoded = verify_cursor(cursor)
+        if not decoded:
             return error("Invalid pagination cursor", "invalid_cursor")
+        
+        # Additional validation - cursor must belong to the queried category
+        if decoded.get("GSI1PK") != category:
+            return error("Invalid pagination cursor", "invalid_cursor")
+        
+        query_kwargs["ExclusiveStartKey"] = decoded
 
     response = table.query(**query_kwargs)
     items = response.get("Items", [])
@@ -247,10 +264,13 @@ def search_listings(event, context):
     if min_trust > 0:
         items = [i for i in items if float(i.get("trust_score", 0)) >= min_trust]
 
-    # Clean up internal fields
+    # Clean up internal fields and ensure trust_score is numeric
     for item in items:
         for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
             item.pop(key, None)
+        # Convert Decimal trust_score to float
+        if "trust_score" in item:
+            item["trust_score"] = float(item["trust_score"])
 
     result = {
         "results": items,
@@ -260,10 +280,7 @@ def search_listings(event, context):
     # Pagination
     last_key = response.get("LastEvaluatedKey")
     if last_key:
-        import base64
-        result["next_cursor"] = base64.b64encode(
-            json.dumps(last_key, default=str).encode()
-        ).decode()
+        result["next_cursor"] = sign_cursor(last_key)
 
     return success(result)
 
@@ -300,6 +317,11 @@ def update_listing(event, context):
     # Allowed update fields
     allowed = {"title", "description", "pricing", "availability", "contact", "tags", "status"}
     updates = {k: v for k, v in body.items() if k in allowed}
+
+    # Type validation on text fields
+    for field in ("title", "description"):
+        if field in updates and not isinstance(updates[field], str):
+            return error(f"{field.capitalize()} must be a string", f"invalid_{field}")
 
     # Content filter on text field updates
     check_title = updates.get("title", existing.get("title", ""))
@@ -364,6 +386,13 @@ def delete_listing(event, context):
 
     table.delete_item(
         Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
+    )
+
+    # Update user's listing_count
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression="ADD listing_count :dec",
+        ExpressionAttributeValues={":dec": -1}
     )
 
     return success({"id": listing_id, "deleted": True})

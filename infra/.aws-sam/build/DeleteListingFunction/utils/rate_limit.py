@@ -62,7 +62,7 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
     return True, remaining, 0
 
 
-def check_auth_failures(event, max_failures=5, window_seconds=300):
+def check_auth_failures(event, max_failures=15, window_seconds=300):
     """Check if IP has too many auth failures (5 min window).
     
     Returns True if blocked.

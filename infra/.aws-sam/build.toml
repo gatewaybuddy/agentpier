@@ -5,8 +5,8 @@ codeuri = "/mnt/d/Projects/agentpier/src"
 runtime = "python3.12"
 architecture = "x86_64"
 handler = "handlers.listings.create_listing"
-manifest_hash = ""
+manifest_hash = "3fa0afe4c262a20079368ba47cd482b1"
 packagetype = "Zip"
-functions = ["CreateListingFunction", "GetListingFunction", "SearchListingsFunction", "UpdateListingFunction", "DeleteListingFunction", "RegisterFunction", "GetMeFunction", "RotateKeyFunction", "DeleteAccountFunction", "GetTrustFunction"]
+functions = ["CreateListingFunction", "GetListingFunction", "SearchListingsFunction", "UpdateListingFunction", "DeleteListingFunction", "RequestChallengeFunction", "RegisterWithChallengeFunction", "GetMeFunction", "RotateKeyFunction", "DeleteAccountFunction", "LoginFunction", "UpdateProfileFunction", "ChangePasswordFunction", "GetPublicProfileFunction", "MoltbookVerifyInitiateFunction", "MoltbookVerifyConfirmFunction", "MoltbookTrustFunction", "MoltbookUnlinkFunction", "TrustRegisterFunction", "TrustReportFunction", "TrustQueryFunction", "TrustSearchFunction", "CreateTransactionFunction", "GetTransactionFunction", "ListTransactionsFunction", "UpdateTransactionFunction", "CreateReviewFunction", "CastLineFunction", "GetLeaderboardFunction", "GetTackleBoxFunction", "GetPierStatsFunction"]
 
 [layer_build_definitions]
