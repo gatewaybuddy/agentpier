@@ -9,7 +9,7 @@ from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
 
-from utils.response import success, error, unauthorized, too_many_requests
+from utils.response import success, error, unauthorized, too_many_requests, handler
 from utils.auth import authenticate, generate_api_key
 from utils.rate_limit import (
     check_rate_limit,
@@ -173,6 +173,7 @@ def _lookup_user_by_username(table, username: str) -> dict | None:
 # POST /auth/login
 # ============================================================
 
+@handler
 def login(event, context):
     """POST /auth/login — Authenticate with username + password, return success confirmation."""
     # Auth failure lockout
@@ -235,6 +236,7 @@ def login(event, context):
 # PATCH /auth/profile
 # ============================================================
 
+@handler
 def update_profile(event, context):
     """PATCH /auth/profile — Update profile fields."""
     if check_auth_failures(event):
@@ -299,6 +301,7 @@ def update_profile(event, context):
 # POST /auth/change-password
 # ============================================================
 
+@handler
 def change_password(event, context):
     """POST /auth/change-password — Change password (requires current password)."""
     if check_auth_failures(event):
@@ -349,6 +352,7 @@ def change_password(event, context):
 # GET /agents/{username} — Public profile
 # ============================================================
 
+@handler
 def get_public_profile(event, context):
     """GET /agents/{username} — Public agent profile (no auth required)."""
     username = (event.get("pathParameters") or {}).get("username", "").strip().lower()
@@ -383,6 +387,7 @@ def get_public_profile(event, context):
 # POST /auth/migrate — Add username/password to legacy account
 # ============================================================
 
+@handler
 def migrate(event, context):
     """POST /auth/migrate — Add username+password to an existing API-key-only account."""
     if check_auth_failures(event):

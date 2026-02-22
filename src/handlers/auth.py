@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import boto3
 
-from utils.response import success, error, unauthorized, too_many_requests
+from utils.response import success, error, unauthorized, too_many_requests, handler
 from utils.auth import generate_api_key, authenticate
 from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
 from utils.challenges import generate_challenge
@@ -26,6 +26,7 @@ def _get_table():
     return dynamodb.Table(TABLE_NAME)
 
 
+@handler
 def request_challenge(event, context):
     """POST /auth/challenge — Request a registration challenge."""
     # Rate limit: 10 challenges per IP per hour
@@ -98,18 +99,9 @@ def request_challenge(event, context):
     })
 
 
+@handler
 def register_with_challenge(event, context):
     """POST /auth/register2 — Register with challenge-response verification."""
-    import traceback
-    try:
-        return _register_with_challenge_inner(event, context)
-    except Exception as e:
-        print(f"REGISTER2 CRASH: {e}")
-        traceback.print_exc()
-        return error(f"Registration failed: {str(e)}", "internal_error", 500)
-
-
-def _register_with_challenge_inner(event, context):
     # Rate limit: 5 registrations per IP per hour
     allowed, remaining, retry_after = check_rate_limit(event, "register2", max_requests=20, window_seconds=3600)
     if not allowed:
@@ -270,6 +262,7 @@ def _register_with_challenge_inner(event, context):
     }, 201)
 
 
+@handler
 def get_me(event, context):
     """GET /auth/me — Get current user profile."""
     # Block IPs with too many auth failures
@@ -310,6 +303,7 @@ def get_me(event, context):
     return success(profile)
 
 
+@handler
 def rotate_key(event, context):
     """POST /auth/rotate-key — Invalidate current API key and issue a new one."""
     if check_auth_failures(event):
@@ -355,6 +349,7 @@ def rotate_key(event, context):
     })
 
 
+@handler
 def delete_account(event, context):
     """DELETE /auth/me — Delete your account and all associated data."""
     if check_auth_failures(event):

@@ -249,10 +249,18 @@ def list_transactions(event, context):
         return error(f"status must be one of: {VALID_STATUSES}", "invalid_status")
 
     table = _get_table()
-    results = []
-
+    
+    # For proper pagination, we recommend specifying a role when using cursors
+    if cursor and not role:
+        return error(
+            "Pagination with cursor requires specifying a role (provider or consumer)",
+            "pagination_requires_role"
+        )
+    
     # Query based on role filter
     roles_to_query = [role] if role else ["provider", "consumer"]
+    results = []
+    last_evaluated_key = None
     
     for query_role in roles_to_query:
         # Build query
@@ -269,8 +277,8 @@ def list_transactions(event, context):
             "Limit": limit,
         }
 
-        # Handle pagination cursor
-        if cursor and query_role == roles_to_query[0]:  # Only apply cursor to first query
+        # Handle pagination cursor (only applies when role is specified)
+        if cursor:
             decoded = verify_cursor(cursor)
             if not decoded:
                 return error("Invalid pagination cursor", "invalid_cursor")
@@ -278,6 +286,10 @@ def list_transactions(event, context):
 
         response = table.query(**query_kwargs)
         items = response.get("Items", [])
+        
+        # Store the last evaluated key for pagination
+        if response.get("LastEvaluatedKey"):
+            last_evaluated_key = response["LastEvaluatedKey"]
 
         # For each transaction reference, get the full transaction
         for item in items:
@@ -291,8 +303,14 @@ def list_transactions(event, context):
                 if trans_resp.get("Item"):
                     results.append(trans_resp["Item"])
 
-        # Stop if we have enough results
-        if len(results) >= limit:
+        # If querying single role and we have enough results, break
+        if role and len(results) >= limit:
+            results = results[:limit]
+            break
+            
+        # If querying both roles, continue to get more results
+        if not role and len(results) >= limit:
+            results = results[:limit]
             break
 
     # Apply status filter (post-query)
@@ -312,13 +330,19 @@ def list_transactions(event, context):
         else:
             transaction["user_role"] = "consumer"
 
+    # Build pagination response
     result = {
         "results": results,
         "count": len(results),
     }
 
-    # TODO: Implement proper pagination with next_cursor
-    # For now, simple implementation without cursor management across multiple queries
+    # Add next_cursor if there are more results
+    if last_evaluated_key and len(results) == limit:
+        next_cursor = sign_cursor(last_evaluated_key)
+        result["next_cursor"] = next_cursor
+        result["has_more"] = True
+    else:
+        result["has_more"] = False
 
     return success(result)
 

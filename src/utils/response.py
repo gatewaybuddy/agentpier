@@ -2,6 +2,9 @@
 
 import json
 import os
+import traceback
+import uuid
+from functools import wraps
 from typing import Any
 
 # Determine allowed origins based on stage
@@ -85,3 +88,26 @@ def too_many_requests(message: str = "Too many requests", retry_after: int = 60)
             "retry_after": retry_after,
         }),
     }
+
+
+def handler(fn):
+    """Decorator that wraps Lambda handlers with error logging and trace IDs."""
+    @wraps(fn)
+    def wrapper(event, context):
+        trace_id = uuid.uuid4().hex[:12]
+        try:
+            return fn(event, context)
+        except Exception as e:
+            print(f"HANDLER_ERROR trace={trace_id} fn={fn.__name__} error={e}")
+            traceback.print_exc()
+            return {
+                "statusCode": 500,
+                "headers": _cors_headers(),
+                "body": json.dumps({
+                    "error": "internal_error",
+                    "message": f"Internal error (trace: {trace_id})",
+                    "trace_id": trace_id,
+                    "status": 500,
+                }),
+            }
+    return wrapper

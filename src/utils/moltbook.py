@@ -13,7 +13,7 @@ import json
 logger = logging.getLogger(__name__)
 
 MOLTBOOK_BASE_URL = "https://www.moltbook.com/api/v1"
-REQUEST_TIMEOUT = 10  # seconds
+REQUEST_TIMEOUT = 5  # seconds — fail fast, don't hang Lambda
 
 
 def _moltbook_request(path, api_key=None):

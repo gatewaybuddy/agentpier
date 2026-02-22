@@ -160,7 +160,7 @@ def moltbook_verify_initiate(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{moltbook_username}' not found")
     except MoltbookAPIError as e:
-        return error(f"Could not reach Moltbook: {e}", "moltbook_unavailable", 502)
+        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
 
     agent_data = profile.get("agent", {})
     if not agent_data.get("is_claimed", False):
@@ -248,7 +248,7 @@ def moltbook_verify_confirm(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{moltbook_username}' no longer exists")
     except MoltbookAPIError as e:
-        return error(f"Could not reach Moltbook: {e}", "moltbook_unavailable", 502)
+        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
 
     agent_data = profile.get("agent", {})
     description = agent_data.get("description", "") or ""
@@ -328,7 +328,7 @@ def moltbook_trust(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{username}' not found")
     except MoltbookAPIError as e:
-        return error(f"Could not reach Moltbook: {e}", "moltbook_unavailable", 502)
+        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
 
     trust_result = calculate_enhanced_trust_score(profile)
     agent_data = profile.get("agent", {})

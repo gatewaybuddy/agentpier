@@ -148,6 +148,8 @@ def create_listing(event, context):
         "posted_by": user_id,
         "agent_name": user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),
+        "moltbook_verified": bool(user.get("moltbook_verified", False)),
+        "moltbook_name": user.get("moltbook_name", "") if user.get("moltbook_verified") else "",
         "trust_score": Decimal("0.0"),
         "status": "active",
         "created_at": now,
