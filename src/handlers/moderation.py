@@ -15,6 +15,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 
 from utils.content_filter import check_listing_content, normalize_text
+from utils.response import success, error, handler
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -155,18 +156,19 @@ def moderation_scan(event, context):
     return report
 
 
+@handler
 def moderation_scan_api(event, context):
     """POST /admin/moderation-scan — API-triggered moderation scan.
     
     Requires admin API key via X-Admin-Key header.
     """
-    from utils.response import success, error
-
     admin_key = os.environ.get("ADMIN_API_KEY", "")
-    provided = (event.get("headers") or {}).get("x-admin-key", "")
+    headers = event.get("headers") or {}
+    # API Gateway lowercases headers
+    provided = headers.get("x-admin-key", "") or headers.get("X-Admin-Key", "")
 
     if not admin_key or provided != admin_key:
-        return {"statusCode": 403, "body": json.dumps({"error": "Forbidden"})}
+        return error("Forbidden", "forbidden", 403)
 
     report = moderation_scan(event, context)
     return success(report)

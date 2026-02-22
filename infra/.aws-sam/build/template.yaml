@@ -56,7 +56,7 @@ Resources:
           - '''https://agentpier.org'''
           - '''https://agentpier.org,http://localhost:3000,http://localhost:8080'''
         AllowMethods: '''GET,POST,PATCH,DELETE,OPTIONS'''
-        AllowHeaders: '''Content-Type,X-API-Key,Authorization'''
+        AllowHeaders: '''Content-Type,X-API-Key,X-Admin-Key,Authorization'''
   CreateListingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -728,6 +728,8 @@ Resources:
               Ref: AgentPierApi
             Path: /admin/moderation-scan
             Method: POST
+            Auth:
+              Authorizer: NONE
     Metadata:
       SamResourceId: ModerationScanFunction
   AgentPierTable:
