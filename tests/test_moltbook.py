@@ -209,37 +209,22 @@ class TestFetchTrustMetrics:
 # 3. Integration tests for link_moltbook handler
 # ---------------------------------------------------------------------------
 
-class TestLinkMoltbook:
-    """link_moltbook is deprecated — should return 410 for all calls."""
-
-    def test_deprecated_returns_410(self, dynamodb, sample_user):
-        from handlers.auth import link_moltbook
-
-        _, raw_key = sample_user
-        event = make_api_event(
-            method="POST", path="/auth/link-moltbook",
-            body={"moltbook_api_key": "mb_key_abc"},
-            api_key=raw_key,
-        )
-        resp = link_moltbook(event, None)
-        assert resp["statusCode"] == 410
-        body = json.loads(resp["body"])
-        assert body["error"] == "deprecated_endpoint"
+    # TestLinkMoltbook removed — link_moltbook endpoint removed (pre-launch cleanup)
 
 
 # ---------------------------------------------------------------------------
-# 4. Integration tests for unlink_moltbook handler
+# 4. Integration tests for moltbook_unlink handler
 # ---------------------------------------------------------------------------
 
-class TestUnlinkMoltbook:
-    """Integration tests: unlink_moltbook handler."""
+class TestMoltbookUnlink:
+    """Integration tests: moltbook_unlink handler (POST /moltbook/unlink)."""
 
     def test_successful_unlink(self, dynamodb, sample_user):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         user_id, raw_key = sample_user
 
-        # Directly set moltbook fields in DB (link_moltbook is deprecated)
+        # Directly set moltbook fields in DB
         dynamodb.update_item(
             Key={"PK": f"USER#{user_id}", "SK": "META"},
             UpdateExpression=(
@@ -254,10 +239,10 @@ class TestUnlinkMoltbook:
 
         # Now unlink
         unlink_event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
             api_key=raw_key,
         )
-        resp = unlink_moltbook(unlink_event, None)
+        resp = moltbook_unlink(unlink_event, None)
 
         assert resp["statusCode"] == 200
         body = json.loads(resp["body"])
@@ -273,26 +258,26 @@ class TestUnlinkMoltbook:
         assert "moltbook_name" not in item
 
     def test_not_linked_error(self, dynamodb, sample_user):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         _, raw_key = sample_user
         event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
             api_key=raw_key,
         )
-        resp = unlink_moltbook(event, None)
+        resp = moltbook_unlink(event, None)
 
         assert resp["statusCode"] == 400
         body = json.loads(resp["body"])
         assert body["error"] == "not_linked"
 
     def test_unauthenticated(self, dynamodb):
-        from handlers.auth import unlink_moltbook
+        from handlers.moltbook import moltbook_unlink
 
         event = make_api_event(
-            method="POST", path="/auth/unlink-moltbook",
+            method="POST", path="/moltbook/unlink",
         )
-        resp = unlink_moltbook(event, None)
+        resp = moltbook_unlink(event, None)
         assert resp["statusCode"] == 401
 
 

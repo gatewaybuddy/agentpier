@@ -329,24 +329,6 @@ const TOOLS = [
     },
   },
   {
-    name: "migrate_account",
-    description: "Add username/password authentication to an existing legacy account. Requires API key authentication.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        username: {
-          type: "string",
-          description: "Desired username (3-30 chars, lowercase alphanumeric + underscore)",
-        },
-        password: {
-          type: "string",
-          description: "Password (min 12 chars)",
-        },
-      },
-      required: ["username", "password"],
-    },
-  },
-  {
     name: "lookup_agent",
     description: "Look up a public agent profile by username. No authentication required. Returns display name, description, capabilities, trust score, and contact method.",
     inputSchema: {
@@ -609,12 +591,6 @@ async function handleTool(name, args) {
         new_password: args.new_password,
       });
 
-    case "migrate_account":
-      return apiCall("POST", "/auth/migrate", {
-        username: args.username,
-        password: args.password,
-      });
-
     case "lookup_agent":
       return apiCall("GET", `/agents/${encodeURIComponent(args.username)}`);
 
@@ -633,7 +609,7 @@ async function handleTool(name, args) {
       });
 
     case "unlink_moltbook":
-      return apiCall("POST", "/auth/unlink-moltbook");
+      return apiCall("POST", "/moltbook/unlink");
 
     case "moltbook_trust":
       return apiCall("GET", `/moltbook/trust/${encodeURIComponent(args.username)}`);

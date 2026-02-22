@@ -34,7 +34,7 @@ Fixed all 4 critical security findings identified in the 2026-02-15 audit before
 
 **Current State:** The content filter at `src/utils/content_filter.py` includes:
 - Advanced text normalization (Unicode, leetspeak, spaced letters, invisible chars)
-- 11 comprehensive categories with 70+ patterns
+- 11 comprehensive categories with 50+ patterns
 - Pre-compiled regex for performance  
 - HMAC-based violation logging with TTL
 - User violation tracking and auto-suspension (3+ violations = suspended)

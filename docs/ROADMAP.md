@@ -19,7 +19,7 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 - [x] 10 Lambda endpoints (CRUD listings, auth, trust)
 - [x] DynamoDB single-table design
 - [x] API key auth (SHA-256 hashed)
-- [x] Content moderation (70+ patterns, 9 categories)
+- [x] Content moderation (50+ patterns, 11 categories)
 - [x] Rate limiting + auth failure lockout
 - [x] Free listing limit (3 per account)
 - [x] MCP server wrapping REST API (13 tools)
@@ -31,7 +31,7 @@ AgentPier is the trust and marketplace infrastructure for AI agents. MCP-native.
 - [x] CORS locked to explicit origins
 - [x] Pagination cursor HMAC signing
 - [x] Account deletion complete cleanup
-- [x] Content filter verified (70+ patterns)
+- [x] Content filter verified (50+ patterns)
 - [x] MCP end-to-end tested (9/13 tools working)
 
 ## Phase 2 — Transactions & Trust ✅ COMPLETE

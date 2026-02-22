@@ -17,10 +17,12 @@ from boto3.dynamodb.conditions import Key
 
 from utils.response import success, error, not_found, unauthorized, too_many_requests
 from utils.auth import authenticate
-from utils.rate_limit import check_rate_limit
+from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
 from utils.moltbook import (
     fetch_trust_metrics, MoltbookError, MoltbookNotFoundError, MoltbookAPIError,
 )
+
+from decimal import Decimal
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -342,4 +344,42 @@ def moltbook_trust(event, context):
         "raw_signals": trust_result["raw"],
         "last_active": agent_data.get("last_active", ""),
         "is_verified": agent_data.get("is_verified", False),
+    })
+
+
+# === POST /moltbook/unlink — Remove Moltbook identity link ===
+def moltbook_unlink(event, context):
+    """Remove Moltbook link from AgentPier profile. Resets trust score."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    user = authenticate(event)
+    if not user:
+        record_auth_failure(event)
+        return unauthorized()
+
+    if not user.get("moltbook_verified"):
+        return error("No Moltbook account linked", "not_linked")
+
+    user_id = user.get("user_id")
+    now = datetime.now(timezone.utc).isoformat()
+    table = _get_table()
+
+    table.update_item(
+        Key={"PK": f"USER#{user_id}", "SK": "META"},
+        UpdateExpression=(
+            "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
+            "moltbook_karma, moltbook_account_age, moltbook_has_owner, trust_breakdown "
+            "SET trust_score = :ts, updated_at = :now"
+        ),
+        ExpressionAttributeValues={
+            ":ts": Decimal("0.0"),
+            ":now": now,
+        },
+    )
+
+    return success({
+        "unlinked": True,
+        "trust_score": 0.0,
+        "message": "Moltbook account unlinked. Trust score reset.",
     })

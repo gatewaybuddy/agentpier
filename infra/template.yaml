@@ -296,61 +296,6 @@ Resources:
             Path: /agents/{username}
             Method: GET
 
-  MigrateAccountFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub agentpier-migrate-account-${Stage}
-      Handler: handlers.profile.migrate
-      CodeUri: ../src/
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AgentPierTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AgentPierApi
-            Path: /auth/migrate
-            Method: POST
-
-  # ============================================
-  # Moltbook Integration (Phase 3)
-  # ============================================
-
-  LinkMoltbookFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub agentpier-link-moltbook-${Stage}
-      Handler: handlers.auth.link_moltbook
-      CodeUri: ../src/
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AgentPierTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AgentPierApi
-            Path: /auth/link-moltbook
-            Method: POST
-
-  UnlinkMoltbookFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub agentpier-unlink-moltbook-${Stage}
-      Handler: handlers.auth.unlink_moltbook
-      CodeUri: ../src/
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref AgentPierTable
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref AgentPierApi
-            Path: /auth/unlink-moltbook
-            Method: POST
-
   # ============================================
   # Moltbook Identity Verification (Phase 3A)
   # ============================================
@@ -405,6 +350,23 @@ Resources:
             RestApiId: !Ref AgentPierApi
             Path: /moltbook/trust/{username}
             Method: GET
+
+  MoltbookUnlinkFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-moltbook-unlink-${Stage}
+      Handler: handlers.moltbook.moltbook_unlink
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /moltbook/unlink
+            Method: POST
 
   # ============================================
   # Trust API (ACE-T)

@@ -443,47 +443,5 @@ def delete_account(event, context):
     })
 
 
-def link_moltbook(event, context):
-    """POST /auth/link-moltbook — DEPRECATED. Use POST /moltbook/verify instead."""
-    return error(
-        "This endpoint is deprecated. Use POST /moltbook/verify for challenge-response "
-        "verification — no credential sharing required. See the moltbook_verify MCP tool.",
-        "deprecated_endpoint", 410,
-    )
-
-
-def unlink_moltbook(event, context):
-    """POST /auth/unlink-moltbook — Remove Moltbook link from your profile."""
-    if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
-
-    user = authenticate(event)
-    if not user:
-        record_auth_failure(event)
-        return unauthorized()
-
-    if not user.get("moltbook_verified"):
-        return error("No Moltbook account linked", "not_linked")
-
-    user_id = user.get("user_id")
-    now = datetime.now(timezone.utc).isoformat()
-    table = _get_table()
-
-    # Remove all Moltbook fields and reset trust score
-    table.update_item(
-        Key={"PK": f"USER#{user_id}", "SK": "META"},
-        UpdateExpression=(
-            "REMOVE moltbook_name, moltbook_verified, moltbook_verified_at, "
-            "moltbook_karma, moltbook_account_age, moltbook_has_owner, trust_breakdown "
-            "SET trust_score = :ts, updated_at = :now"
-        ),
-        ExpressionAttributeValues={
-            ":ts": Decimal("0.0"),
-            ":now": now,
-        },
-    )
-
-    return success({
-        "unlinked": True,
-        "trust_score": 0.0,
-    })
+    # link_moltbook and unlink_moltbook removed — moved to handlers.moltbook module
+    # Routes: POST /moltbook/unlink (was /auth/unlink-moltbook)
