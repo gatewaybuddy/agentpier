@@ -12,7 +12,8 @@ Globals:
         TABLE_NAME: !Ref AgentPierTable
         STAGE: !Ref Stage
         CURSOR_SECRET: !Ref CursorSecret
-        DEPLOY_VERSION: "2026-02-21-v2"
+        DEPLOY_VERSION: "2026-02-22-v3"
+        ADMIN_API_KEY: !Ref AdminApiKey
 
 Parameters:
   Stage:
@@ -26,6 +27,11 @@ Parameters:
     NoEcho: true
     Description: Secret key for HMAC signing of pagination cursors
     MinLength: 32
+  AdminApiKey:
+    Type: String
+    NoEcho: true
+    Description: Admin API key for moderation endpoints
+    Default: "none"
 
 Conditions:
   IsProduction: !Equals [!Ref Stage, prod]
@@ -600,6 +606,27 @@ Resources:
             RestApiId: !Ref AgentPierApi
             Path: /pier/stats
             Method: GET
+
+  # ============================================
+  # Scheduled — Content Moderation Scan (invoked via OpenClaw cron)
+  # ============================================
+  ModerationScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-moderation-scan-${Stage}
+      Handler: handlers.moderation.moderation_scan_api
+      CodeUri: ../src/
+      Timeout: 300
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /admin/moderation-scan
+            Method: POST
 
   # ============================================
   # DynamoDB — Single Table Design
