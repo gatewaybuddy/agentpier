@@ -54,7 +54,7 @@ Resources:
           - "'https://agentpier.org'"
           - "'https://agentpier.org,http://localhost:3000,http://localhost:8080'"
         AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-API-Key,Authorization'"
+        AllowHeaders: "'Content-Type,X-API-Key,X-Admin-Key,Authorization'"
 
   # ============================================
   # Lambda Functions
@@ -627,6 +627,8 @@ Resources:
             RestApiId: !Ref AgentPierApi
             Path: /admin/moderation-scan
             Method: POST
+            Auth:
+              Authorizer: NONE
 
   # ============================================
   # DynamoDB — Single Table Design

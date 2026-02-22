@@ -14,7 +14,9 @@ Globals:
           Ref: Stage
         CURSOR_SECRET:
           Ref: CursorSecret
-        DEPLOY_VERSION: 2026-02-21-v2
+        DEPLOY_VERSION: 2026-02-22-v3
+        ADMIN_API_KEY:
+          Ref: AdminApiKey
 Parameters:
   Stage:
     Type: String
@@ -27,6 +29,11 @@ Parameters:
     NoEcho: true
     Description: Secret key for HMAC signing of pagination cursors
     MinLength: 32
+  AdminApiKey:
+    Type: String
+    NoEcho: true
+    Description: Admin API key for moderation endpoints
+    Default: none
 Conditions:
   IsProduction:
     Fn::Equals:
@@ -701,6 +708,28 @@ Resources:
             Method: GET
     Metadata:
       SamResourceId: GetPierStatsFunction
+  ModerationScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-moderation-scan-${Stage}
+      Handler: handlers.moderation.moderation_scan_api
+      CodeUri: ModerationScanFunction
+      Timeout: 300
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /admin/moderation-scan
+            Method: POST
+    Metadata:
+      SamResourceId: ModerationScanFunction
   AgentPierTable:
     Type: AWS::DynamoDB::Table
     Properties:
