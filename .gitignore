@@ -6,3 +6,9 @@ __pycache__/
 venv/
 *.egg-info/
 agents/
+
+# Production content filter (private patterns)
+src/utils/content_filter.py.production
+
+# Private production patterns (not in public repo)
+src/utils/content_filter_patterns.py
