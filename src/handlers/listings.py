@@ -146,7 +146,7 @@ def create_listing(event, context):
         "contact": body.get("contact", {}),
         "tags": clean_tags,
         "posted_by": user_id,
-        "agent_name": user.get("agent_name", ""),
+        "agent_name": user.get("username") or user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),
         "moltbook_verified": bool(user.get("moltbook_verified", False)),
         "moltbook_name": user.get("moltbook_name", "") if user.get("moltbook_verified") else "",
@@ -168,7 +168,7 @@ def create_listing(event, context):
     return success({
         "id": listing_id,
         "status": "active",
-        "trust_score": Decimal("0.0"),
+        "trust_score": 0.0,
         "created_at": now,
         "url": f"https://agentpier.io/listing/{listing_id}",
     }, 201)

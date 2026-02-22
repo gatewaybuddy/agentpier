@@ -277,7 +277,7 @@ def get_me(event, context):
     # Clean response
     profile = {
         "user_id": user.get("user_id"),
-        "agent_name": user.get("agent_name"),
+        "username": user.get("username") or user.get("agent_name"),  # Support legacy agent_name field
         "description": user.get("description"),
         "human_verified": user.get("human_verified", False),
         "trust_score": float(user.get("trust_score", 0)),

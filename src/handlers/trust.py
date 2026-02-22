@@ -200,29 +200,48 @@ def trust_query(event, context):
 
     table = _get_table()
 
-    # Get profile
-    profile_resp = table.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})
+    # Get user profile (AgentPier users are stored as USER# not AGENT#)
+    profile_resp = table.get_item(Key={"PK": f"USER#{agent_id}", "SK": "META"})
     profile = profile_resp.get("Item")
     if not profile:
         return not_found(f"Agent {agent_id} not found")
 
-    # Get events
-    events = _get_agent_events(table, agent_id)
-
-    # Calculate current ACE score
-    score_data = calculate_ace_score(profile, events)
+    # Get events (trust events for AgentPier users would be stored under USER#, not AGENT#)
+    # For now, return default score since trust events system isn't fully integrated with user records
+    events = []
+    
+    # Return default trust score breakdown when no trust events exist
+    trust_score = float(profile.get("trust_score", 0.0))
+    
+    # Build default ACE score breakdown
+    default_axes = {
+        "autonomy": 0.0,
+        "competence": 0.0,  
+        "experience": 0.0
+    }
+    default_weights = {
+        "autonomy": 0.4,
+        "competence": 0.4,
+        "experience": 0.2
+    }
+    default_history = {
+        "total_events": 0,
+        "success_events": 0,
+        "failure_events": 0,
+        "safety_violations": 0
+    }
 
     # Build trust sources
     sources = {
         "agentpier": {
-            "trust_score": score_data["trust_score"],
-            "events": score_data["history"]["total_events"],
+            "trust_score": trust_score,
+            "events": 0,
         },
     }
 
     # Check for linked Moltbook account
     moltbook_name = profile.get("moltbook_name", "")
-    combined_score = score_data["trust_score"]
+    combined_score = trust_score
 
     if moltbook_name:
         moltbook_source = {
@@ -240,32 +259,32 @@ def trust_query(event, context):
             moltbook_source["age_days"] = trust_result["raw"]["age_days"]
             moltbook_source["trust_score"] = trust_result["trust_score"]
 
-            # Blend: 40% ACE-T + 60% Moltbook (Moltbook is bootstrapped identity)
+            # Blend: 40% AgentPier + 60% Moltbook (Moltbook is bootstrapped identity)
             combined_score = round(
-                score_data["trust_score"] * 0.4 + trust_result["trust_score"] * 100 * 0.6,
+                trust_score * 0.4 + trust_result["trust_score"] * 100 * 0.6,
                 2,
             )
             combined_score = min(95.0, combined_score)
         except MoltbookError:
             # Use cached data if Moltbook is unreachable
-            moltbook_source["trust_score"] = float(profile.get("trust_score", 0))
+            moltbook_source["trust_score"] = trust_score
             moltbook_source["cached"] = True
 
         sources["moltbook"] = moltbook_source
 
     return success({
         "agent_id": agent_id,
-        "agent_name": profile.get("agent_name", ""),
+        "agent_name": profile.get("username") or profile.get("agent_name", ""),
         "description": profile.get("description", ""),
         "capabilities": profile.get("capabilities", []),
         "declared_scope": profile.get("declared_scope", ""),
-        "contact_url": profile.get("contact_url", ""),
-        "registered_at": profile.get("registered_at", ""),
+        "contact_url": profile.get("contact_method", {}).get("endpoint", ""),
+        "registered_at": profile.get("created_at", ""),
         "trust_score": combined_score,
-        "trust_tier": score_data["trust_tier"],
-        "axes": score_data["axes"],
-        "weights": score_data["weights"],
-        "history": score_data["history"],
+        "trust_tier": "untrusted" if combined_score == 0.0 else "verified",
+        "axes": default_axes,
+        "weights": default_weights,
+        "history": default_history,
         "sources": sources,
     })
 
