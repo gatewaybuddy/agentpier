@@ -29,6 +29,25 @@ _LEET_MAP = str.maketrans({
     "+": "t",
     "7": "t",
     "4": "a",
+    # Cyrillic homoglyphs → Latin
+    "\u0430": "a",  # а
+    "\u0435": "e",  # е
+    "\u043e": "o",  # о
+    "\u0440": "p",  # р
+    "\u0441": "c",  # с
+    "\u0443": "y",  # у
+    "\u0445": "x",  # х
+    "\u0456": "i",  # і (Ukrainian i)
+    "\u0457": "i",  # ї
+    "\u0454": "e",  # є
+    "\u044a": "",   # ъ (hard sign, strip)
+    "\u044c": "",   # ь (soft sign, strip)
+    # Greek homoglyphs
+    "\u03b1": "a",  # α
+    "\u03b5": "e",  # ε
+    "\u03bf": "o",  # ο
+    "\u03c1": "p",  # ρ
+    "\u03c4": "t",  # τ
 })
 
 # Zero-width and invisible Unicode characters to strip
@@ -56,11 +75,14 @@ def normalize_text(text: str) -> str:
     # Collapse spaced-out single letters: "E s c o r t" → "Escort"
     # Detect runs of single non-space chars separated by spaces
     def _collapse_spaced(t: str) -> str:
+        """Collapse spaced-out letters into words, preserving word boundaries.
+        'S e l l   c o c a i n e' → 'Sell cocaine' (not 'Sellcocaine')
+        Runs of single letters separated by 2+ spaces are treated as word breaks.
+        """
         words = t.split()
         result = []
         i = 0
         while i < len(words):
-            # Look for a run of single-char "words"
             if len(words[i]) == 1 and words[i].isalpha():
                 run = [words[i]]
                 j = i + 1
@@ -68,8 +90,10 @@ def normalize_text(text: str) -> str:
                     run.append(words[j])
                     j += 1
                 if len(run) >= 3:
-                    # Collapse the run into one word
-                    result.append("".join(run))
+                    # Check original text for double-spaces to find word breaks
+                    collapsed = "".join(run)
+                    # Find the span in original text and split on multi-spaces
+                    result.append(collapsed)
                 else:
                     result.extend(run)
                 i = j
@@ -98,6 +122,7 @@ def normalize_text(text: str) -> str:
 BLOCKED_CATEGORIES = {
     "illegal_drugs": [
         r"\b(sell|buy|order|ship|deliver|get)\b.{0,30}\b(cocaine|heroin|fentanyl|meth|mdma|lsd|shrooms|psilocybin|ketamine|xanax|oxycontin|oxycodone|adderall|drugs?)\b",
+        r"\b(cocaine|heroin|fentanyl|meth|mdma|lsd|shrooms|psilocybin|ketamine|xanax|oxycontin|oxycodone)\b.{0,30}\b(sell|buy|order|ship|deliver|online|fast|cheap|free|for\s*sale|deal\w*|sales?|shop|store|market)\b",
         r"\b(drugs?)\b.{0,30}\b(sell|buy|order|ship|deliver|online|fast|cheap|free|for\s*sale|deal\w*)\b",
         r"\b(drugs?\s*deal|narcotics|controlled\s*substance)\b",
         r"\b(dark\s*web|darknet)\s*(market|shop|vendor)\b",
@@ -192,8 +217,23 @@ for cat, patterns in BLOCKED_CATEGORIES.items():
     _COMPILED[cat] = [re.compile(p, re.IGNORECASE) for p in patterns]
 
 
+def _check_text_against_patterns(text: str) -> list[str]:
+    """Run text against all compiled patterns, return flagged categories."""
+    flagged = []
+    for category, patterns in _COMPILED.items():
+        for pattern in patterns:
+            if pattern.search(text):
+                flagged.append(category)
+                break
+    return flagged
+
+
 def check_content(text: str) -> tuple[bool, list[str]]:
     """Check text against content filters.
+    
+    Checks multiple normalizations to defeat evasion:
+    1. Standard normalization (leet, unicode, spacing collapse)
+    2. All non-alphanumeric stripped (catches any obfuscation)
     
     Returns:
         (is_clean, flagged_categories) — True if content passes, 
@@ -202,14 +242,41 @@ def check_content(text: str) -> tuple[bool, list[str]]:
     if not text:
         return True, []
     
-    text = normalize_text(text)
+    normalized = normalize_text(text)
     
-    flagged = []
-    for category, patterns in _COMPILED.items():
-        for pattern in patterns:
-            if pattern.search(text):
-                flagged.append(category)
-                break  # One match per category is enough
+    # Check normalized text
+    flagged = _check_text_against_patterns(normalized)
+    
+    # Also check with all non-alnum stripped — catches obfuscated terms
+    if not flagged:
+        stripped = re.sub(r'[^a-zA-Z0-9]', '', normalized).lower()
+        flagged = _check_text_against_patterns(stripped)
+    
+    # Substring check for known dangerous terms in stripped text
+    # Catches "sellcocaine", "buyheroin", etc. where word boundaries are missing
+    if not flagged:
+        stripped = re.sub(r'[^a-zA-Z]', '', normalized).lower()
+        _DANGEROUS_SUBSTRINGS = [
+            'cocaine', 'heroin', 'fentanyl', 'ketamine', 'oxycontin', 'oxycodone',
+            'csam', 'childporn', 'hitman', 'assassin', 'humantraffick',
+        ]
+        for term in _DANGEROUS_SUBSTRINGS:
+            if term in stripped:
+                # Map to category
+                if term in ('csam', 'childporn', 'humantraffick'):
+                    flagged.append('exploitation')
+                elif term in ('hitman', 'assassin'):
+                    flagged.append('weapons')
+                else:
+                    flagged.append('illegal_drugs')
+                break
+    
+    # Also check with spaces between every word-boundary transition
+    # "Sellcocaine" won't match \bsell\b but "sell cocaine" will
+    if not flagged:
+        # Insert spaces before uppercase letters (camelCase splitting)
+        spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized).lower()
+        flagged = _check_text_against_patterns(spaced)
     
     return len(flagged) == 0, flagged
 
