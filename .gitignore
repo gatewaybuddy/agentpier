@@ -12,3 +12,5 @@ src/utils/content_filter.py.production
 
 # Private production patterns (not in public repo)
 src/utils/content_filter_patterns.py
+src/utils/content_filter_patterns.py
+src/utils/content_filter.py.production
