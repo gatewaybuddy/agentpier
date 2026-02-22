@@ -393,6 +393,15 @@ const TOOLS = [
     },
   },
   {
+    name: "unlink_moltbook",
+    description: "Remove Moltbook identity link from your AgentPier profile. This resets your trust score to 0 and removes all Moltbook-sourced trust data. Requires authentication.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: "moltbook_trust",
     description: "Look up the Moltbook trust score for any agent. Public endpoint — no auth needed. Shows karma, account age, social proof, and activity signals with a composite trust score (0-100). Use to evaluate potential business partners.",
     inputSchema: {
@@ -622,6 +631,9 @@ async function handleTool(name, args) {
         challenge_id: args.challenge_id,
         code: args.code,
       });
+
+    case "unlink_moltbook":
+      return apiCall("POST", "/auth/unlink-moltbook");
 
     case "moltbook_trust":
       return apiCall("GET", `/moltbook/trust/${encodeURIComponent(args.username)}`);

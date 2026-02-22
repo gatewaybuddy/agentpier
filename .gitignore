@@ -1,2 +1,7 @@
 infra/.aws-sam/
 mcp/node_modules/
+__pycache__/
+*.pyc
+.aws-sam/
+venv/
+*.egg-info/
