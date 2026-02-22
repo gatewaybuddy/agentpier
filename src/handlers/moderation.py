@@ -104,9 +104,10 @@ def moderation_scan(event, context):
     clean = []
 
     for listing in listings:
-        title = listing.get("title", "")
-        desc = listing.get("description", "")
-        tags = listing.get("tags", [])
+        title = str(listing.get("title", ""))
+        desc = str(listing.get("description", ""))
+        raw_tags = listing.get("tags", [])
+        tags = [str(t) for t in raw_tags] if isinstance(raw_tags, list) else []
 
         is_clean, flagged = check_listing_content(title, desc, tags)
         if not is_clean:
