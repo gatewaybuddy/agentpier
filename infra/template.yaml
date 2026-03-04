@@ -447,6 +447,44 @@ Resources:
             Method: GET
 
   # ============================================
+  # Clearinghouse Score API (Issue #42)
+  # ============================================
+
+  ClearinghouseScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-clearinghouse-score-${Stage}
+      Handler: handlers.trust.trust_clearinghouse_score
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/agents/{agent_id}/clearinghouse-score
+            Method: GET
+
+  RecalculateScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-recalculate-score-${Stage}
+      Handler: handlers.trust.trust_recalculate
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/agents/{agent_id}/recalculate
+            Method: POST
+
+  # ============================================
   # Transaction API (Phase 2)
   # ============================================
 

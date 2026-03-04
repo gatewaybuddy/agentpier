@@ -8,12 +8,16 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
 from utils.response import success, error, not_found
-from utils.ace_scoring import calculate_ace_score, moltbook_weight
+from utils.ace_scoring import calculate_ace_score, calculate_clearinghouse_score, moltbook_weight
+from utils.score_query import get_agent_signals_all_sources
+from utils.score_response import sanitize_score_response
+from utils.audit import log_signal_access
 from utils.moltbook import fetch_trust_metrics, calculate_trust_score, MoltbookError
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
@@ -398,3 +402,151 @@ def trust_search(event, context):
         "count": len(results),
         "limit": limit,
     })
+
+
+def _get_marketplace_scores(table) -> dict:
+    """Fetch trust scores for all registered marketplaces.
+
+    Returns dict of {marketplace_id: trust_score (0-100)}.
+    """
+    scores = {}
+    scan_kwargs = {
+        "FilterExpression": Attr("SK").eq("PROFILE") & Attr("PK").begins_with("MARKETPLACE#"),
+    }
+    response = table.scan(**scan_kwargs)
+    for item in response.get("Items", []):
+        mp_id = item.get("marketplace_id", "")
+        score = item.get("trust_score")
+        if mp_id and score is not None:
+            try:
+                scores[mp_id] = float(score)
+            except (ValueError, TypeError):
+                pass
+    return scores
+
+
+# === GET /trust/agents/{agent_id}/clearinghouse-score ===
+def trust_clearinghouse_score(event, context):
+    """Public endpoint: cross-platform clearinghouse trust score.
+
+    Aggregates signals from all marketplaces, calculates four-dimension
+    score, and returns sanitized result (no marketplace source info).
+    """
+    agent_id = event.get("pathParameters", {}).get("agent_id", "")
+    if not agent_id:
+        return error("agent_id is required", "validation_error")
+
+    table = _get_table()
+
+    # Verify agent exists (check both AGENT# and USER# patterns)
+    profile_resp = table.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})
+    profile = profile_resp.get("Item")
+    if not profile:
+        profile_resp = table.get_item(Key={"PK": f"USER#{agent_id}", "SK": "META"})
+        profile = profile_resp.get("Item")
+    if not profile:
+        return not_found(f"Agent {agent_id} not found")
+
+    # Fetch all signals across marketplaces (internal only)
+    signals = get_agent_signals_all_sources(agent_id)
+
+    # Fetch marketplace trust scores for source weighting
+    marketplace_scores = _get_marketplace_scores(table)
+
+    # Calculate clearinghouse score
+    score_data = calculate_clearinghouse_score(
+        agent_id=agent_id,
+        signals=signals,
+        marketplace_scores=marketplace_scores,
+    )
+
+    # Add agent_id to response
+    score_data["agent_id"] = agent_id
+
+    # Sanitize — strip any marketplace-identifying fields
+    sanitized = sanitize_score_response(score_data)
+
+    # Audit log
+    ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp", "")
+    log_signal_access(
+        accessor_id="public",
+        accessor_type="system",
+        agent_id=agent_id,
+        action="clearinghouse_score_query",
+        ip_address=ip,
+    )
+
+    return success(sanitized)
+
+
+# === POST /trust/agents/{agent_id}/recalculate ===
+def trust_recalculate(event, context):
+    """Admin/system endpoint: force full recalculation from all signals.
+
+    Recalculates the clearinghouse score and updates the agent profile.
+    """
+    agent_id = event.get("pathParameters", {}).get("agent_id", "")
+    if not agent_id:
+        return error("agent_id is required", "validation_error")
+
+    table = _get_table()
+
+    # Verify agent exists
+    profile_resp = table.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})
+    profile = profile_resp.get("Item")
+    if not profile:
+        profile_resp = table.get_item(Key={"PK": f"USER#{agent_id}", "SK": "META"})
+        profile = profile_resp.get("Item")
+    if not profile:
+        return not_found(f"Agent {agent_id} not found")
+
+    # Fetch all signals across marketplaces
+    signals = get_agent_signals_all_sources(agent_id)
+
+    # Fetch marketplace trust scores
+    marketplace_scores = _get_marketplace_scores(table)
+
+    # Calculate clearinghouse score
+    score_data = calculate_clearinghouse_score(
+        agent_id=agent_id,
+        signals=signals,
+        marketplace_scores=marketplace_scores,
+    )
+
+    # Update stored score on agent profile
+    pk = profile.get("PK", f"AGENT#{agent_id}")
+    sk = profile.get("SK", "PROFILE")
+    now = _now_iso()
+
+    table.update_item(
+        Key={"PK": pk, "SK": sk},
+        UpdateExpression=(
+            "SET trust_score = :s, trust_tier = :t, last_scored_at = :ts, "
+            "clearinghouse_dimensions = :dims, clearinghouse_confidence = :conf"
+        ),
+        ExpressionAttributeValues={
+            ":s": str(score_data["trust_score"]),
+            ":t": score_data["trust_tier"],
+            ":ts": now,
+            ":dims": {k: Decimal(str(v)) for k, v in score_data["dimensions"].items()},
+            ":conf": str(score_data["confidence"]),
+        },
+    )
+
+    # Add agent_id to response
+    score_data["agent_id"] = agent_id
+
+    # Sanitize
+    sanitized = sanitize_score_response(score_data)
+
+    # Audit log
+    ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp", "")
+    log_signal_access(
+        accessor_id="system",
+        accessor_type="admin",
+        agent_id=agent_id,
+        action="recalculate",
+        ip_address=ip,
+    )
+
+    return success(sanitized)
