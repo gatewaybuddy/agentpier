@@ -54,7 +54,7 @@ Resources:
           - "'https://agentpier.org'"
           - "'https://agentpier.org,http://localhost:3000,http://localhost:8080'"
         AllowMethods: "'GET,POST,PATCH,DELETE,OPTIONS'"
-        AllowHeaders: "'Content-Type,X-API-Key,X-Admin-Key,Authorization'"
+        AllowHeaders: "'Content-Type,X-API-Key,X-Admin-Key,X-Marketplace-Key,Authorization'"
 
   # ============================================
   # Lambda Functions
@@ -701,6 +701,44 @@ Resources:
             RestApiId: !Ref AgentPierApi
             Path: /marketplace/{id}/rotate-key
             Method: POST
+
+  # ============================================
+  # Signal Ingestion API
+  # ============================================
+
+  IngestSignalsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-ingest-signals-${Stage}
+      Handler: handlers.signals.ingest_signals
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/signals
+            Method: POST
+
+  GetSignalStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-signal-stats-${Stage}
+      Handler: handlers.signals.get_signal_stats
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /trust/signals/stats
+            Method: GET
 
   # ============================================
   # DynamoDB — Single Table Design
