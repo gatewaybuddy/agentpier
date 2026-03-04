@@ -817,6 +817,95 @@ Resources:
             Method: GET
 
   # ============================================
+  # Badge API (Issue #44)
+  # ============================================
+
+  GetBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-badge-${Stage}
+      Handler: handlers.badges.get_badge
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /badges/{agent_id}
+            Method: GET
+
+  GetBadgesBatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-badges-batch-${Stage}
+      Handler: handlers.badges.get_badges_batch
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /badges/batch
+            Method: POST
+
+  GetBadgeImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-badge-image-${Stage}
+      Handler: handlers.badges.get_badge_image
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /badges/{agent_id}/image
+            Method: GET
+
+  VerifyBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-verify-badge-${Stage}
+      Handler: handlers.badges.verify_badge
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /badges/{agent_id}/verify
+            Method: GET
+
+  GetMarketplaceBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-marketplace-badge-${Stage}
+      Handler: handlers.badges.get_marketplace_badge
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /badges/marketplace/{marketplace_id}
+            Method: GET
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:
