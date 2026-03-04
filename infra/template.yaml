@@ -741,6 +741,44 @@ Resources:
             Method: POST
 
   # ============================================
+  # Marketplace Scoring (Issue #43)
+  # ============================================
+
+  GetMarketplaceScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-marketplace-score-${Stage}
+      Handler: handlers.marketplace.get_marketplace_score
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/{id}/score
+            Method: GET
+
+  RecalculateMarketplaceScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-recalculate-marketplace-score-${Stage}
+      Handler: handlers.marketplace.recalculate_marketplace_score
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/{id}/recalculate-score
+            Method: POST
+
+  # ============================================
   # Signal Ingestion API
   # ============================================
 

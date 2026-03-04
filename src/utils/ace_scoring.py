@@ -19,6 +19,7 @@ Cross-platform clearinghouse scoring (issue #42):
 """
 
 import math
+import os
 import statistics
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -610,3 +611,33 @@ def calculate_clearinghouse_score(agent_id: str, signals: list,
         "marketplace_count": marketplace_count,
         "last_updated": now.isoformat(),
     }
+
+
+def get_marketplace_scores(marketplace_ids: list) -> dict:
+    """Fetch current scores for given marketplaces from DynamoDB.
+
+    Returns:
+        Dict of {marketplace_id: marketplace_trust_score} for source weighting.
+    """
+    if not marketplace_ids:
+        return {}
+
+    import boto3
+
+    table_name = os.environ.get("TABLE_NAME", "agentpier-dev")
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(table_name)
+
+    scores = {}
+    for mp_id in set(marketplace_ids):
+        try:
+            response = table.get_item(
+                Key={"PK": f"MARKETPLACE#{mp_id}", "SK": "PROFILE"}
+            )
+            item = response.get("Item")
+            if item and item.get("marketplace_score") is not None:
+                scores[mp_id] = float(item["marketplace_score"])
+        except Exception:
+            continue
+
+    return scores

@@ -13,6 +13,7 @@ from boto3.dynamodb.conditions import Key
 from utils.response import success, error, unauthorized, not_found, too_many_requests, handler
 from utils.auth import generate_api_key, hash_key
 from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
+from utils.marketplace_scoring import calculate_marketplace_score
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -323,4 +324,131 @@ def rotate_marketplace_key(event, context):
         "marketplace_id": marketplace_id,
         "api_key": raw_key,
         "message": "Key rotated. Your previous key is now invalid. Store this new key securely.",
+    })
+
+
+def _fetch_marketplace_signals(table, marketplace_id):
+    """Fetch all signals submitted by a marketplace."""
+    signals = []
+    scan_kwargs = {
+        "FilterExpression": "marketplace_id = :mp_id AND begins_with(PK, :prefix)",
+        "ExpressionAttributeValues": {
+            ":mp_id": marketplace_id,
+            ":prefix": "SIGNAL#",
+        },
+    }
+    done = False
+    while not done:
+        response = table.scan(**scan_kwargs)
+        signals.extend(response.get("Items", []))
+        if "LastEvaluatedKey" in response:
+            scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+        else:
+            done = True
+    return signals
+
+
+def _fetch_marketplace_audit_records(table, marketplace_id):
+    """Fetch audit records for a marketplace."""
+    records = []
+    scan_kwargs = {
+        "FilterExpression": "marketplace_id = :mp_id AND begins_with(PK, :prefix)",
+        "ExpressionAttributeValues": {
+            ":mp_id": marketplace_id,
+            ":prefix": "AUDIT#",
+        },
+    }
+    done = False
+    while not done:
+        response = table.scan(**scan_kwargs)
+        records.extend(response.get("Items", []))
+        if "LastEvaluatedKey" in response:
+            scan_kwargs["ExclusiveStartKey"] = response["LastEvaluatedKey"]
+        else:
+            done = True
+    return records
+
+
+@handler
+def get_marketplace_score(event, context):
+    """GET /marketplace/{id}/score — Public marketplace score (sanitized)."""
+    path_params = event.get("pathParameters") or {}
+    marketplace_id = path_params.get("id", "")
+
+    if not marketplace_id:
+        return error("marketplace id is required", "missing_id")
+
+    table = _get_table()
+    response = table.get_item(
+        Key={"PK": f"MARKETPLACE#{marketplace_id}", "SK": "PROFILE"}
+    )
+    item = response.get("Item")
+    if not item:
+        return not_found("Marketplace not found")
+
+    # Return sanitized public score data
+    return success({
+        "marketplace_id": marketplace_id,
+        "name": item.get("name"),
+        "marketplace_score": float(item.get("marketplace_score", 0)),
+        "tier": item.get("tier", "registered"),
+        "signal_count": int(item.get("signal_count", 0)),
+        "dimensions": json.loads(item["marketplace_dimensions"]) if item.get("marketplace_dimensions") else None,
+        "last_scored_at": item.get("last_scored_at"),
+    })
+
+
+@handler
+def recalculate_marketplace_score(event, context):
+    """POST /marketplace/{id}/recalculate-score — Recalculate marketplace score from signals."""
+    if check_auth_failures(event):
+        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+
+    marketplace = _authenticate_marketplace(event)
+    if not marketplace:
+        record_auth_failure(event)
+        return unauthorized("Invalid or missing API key.")
+
+    path_params = event.get("pathParameters") or {}
+    marketplace_id = path_params.get("id", "")
+
+    if marketplace.get("marketplace_id") != marketplace_id:
+        return unauthorized("API key does not match this marketplace.")
+
+    table = _get_table()
+
+    # Fetch all signals and audit records for this marketplace
+    signals = _fetch_marketplace_signals(table, marketplace_id)
+    audit_records = _fetch_marketplace_audit_records(table, marketplace_id)
+    profile = marketplace
+
+    # Calculate score
+    result = calculate_marketplace_score(
+        marketplace_id=marketplace_id,
+        signals_submitted=signals,
+        audit_records=audit_records,
+        profile=profile,
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Update marketplace profile with new score
+    table.update_item(
+        Key={"PK": f"MARKETPLACE#{marketplace_id}", "SK": "PROFILE"},
+        UpdateExpression="SET marketplace_score = :score, tier = :tier, last_scored_at = :now, marketplace_dimensions = :dims",
+        ExpressionAttributeValues={
+            ":score": Decimal(str(result["marketplace_score"])),
+            ":tier": result["marketplace_tier"],
+            ":now": now,
+            ":dims": json.dumps(result["dimensions"]),
+        },
+    )
+
+    return success({
+        "marketplace_id": marketplace_id,
+        "marketplace_score": result["marketplace_score"],
+        "marketplace_tier": result["marketplace_tier"],
+        "dimensions": result["dimensions"],
+        "signal_count": result["signal_count"],
+        "last_updated": result["last_updated"],
     })
