@@ -906,6 +906,61 @@ Resources:
             Method: GET
 
   # ============================================
+  # Certification Standards API (Issue #46)
+  # ============================================
+
+  GetStandardsCurrentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-standards-current-${Stage}
+      Handler: handlers.standards.get_standards_current
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /standards/current
+            Method: GET
+
+  GetStandardsAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-standards-agent-${Stage}
+      Handler: handlers.standards.get_standards_agent
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /standards/agent
+            Method: GET
+
+  GetStandardsMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-standards-marketplace-${Stage}
+      Handler: handlers.standards.get_standards_marketplace
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /standards/marketplace
+            Method: GET
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:
