@@ -631,6 +631,78 @@ Resources:
               Authorizer: NONE
 
   # ============================================
+  # Marketplace Registration & Management
+  # ============================================
+
+  RegisterMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-register-marketplace-${Stage}
+      Handler: handlers.marketplace.register_marketplace
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/register
+            Method: POST
+
+  GetMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-marketplace-${Stage}
+      Handler: handlers.marketplace.get_marketplace
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/{id}
+            Method: GET
+
+  UpdateMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-update-marketplace-${Stage}
+      Handler: handlers.marketplace.update_marketplace
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/{id}
+            Method: PUT
+
+  RotateMarketplaceKeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-rotate-marketplace-key-${Stage}
+      Handler: handlers.marketplace.rotate_marketplace_key
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /marketplace/{id}/rotate-key
+            Method: POST
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:
