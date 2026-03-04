@@ -10,7 +10,8 @@ from boto3.dynamodb.conditions import Key
 
 from utils.response import success, error, unauthorized, too_many_requests, handler
 from utils.marketplace_auth import authenticate_marketplace
-from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
+from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
+from utils.audit import log_signal_access
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
@@ -23,6 +24,17 @@ SIGNAL_TYPES = {
 }
 
 MAX_BATCH_SIZE = 100
+
+DATA_FIREWALL_HEADER = "X-Data-Firewall"
+DATA_FIREWALL_VALUE = "enforced"
+
+
+def _add_firewall_header(response):
+    """Add X-Data-Firewall: enforced header to signal responses."""
+    if "headers" not in response:
+        response["headers"] = {}
+    response["headers"][DATA_FIREWALL_HEADER] = DATA_FIREWALL_VALUE
+    return response
 
 
 def _get_table():
@@ -244,14 +256,26 @@ def ingest_signals(event, context):
     if agent_ids:
         _update_counters(table, marketplace_id, agent_ids)
 
+    # Audit log for each accepted signal
+    ip = get_client_ip(event)
+    for agent_id in set(agent_ids):
+        log_signal_access(
+            accessor_id=marketplace_id,
+            accessor_type="marketplace",
+            agent_id=agent_id,
+            marketplace_id=marketplace_id,
+            action="ingest",
+            ip_address=ip,
+        )
+
     accepted_count = sum(1 for r in results if r["status"] == "accepted")
     duplicate_count = sum(1 for r in results if r["status"] == "already_received")
 
-    return success({
+    return _add_firewall_header(success({
         "accepted": accepted_count,
         "duplicates": duplicate_count,
         "signals": results,
-    }, 201 if accepted_count > 0 else 200)
+    }, 201 if accepted_count > 0 else 200))
 
 
 @handler
@@ -312,7 +336,17 @@ def get_signal_stats(event, context):
         else:
             done = True
 
-    return success({
+    # Audit log for stats query
+    log_signal_access(
+        accessor_id=marketplace_id,
+        accessor_type="marketplace",
+        agent_id="*",
+        marketplace_id=marketplace_id,
+        action="stats_query",
+        ip_address=get_client_ip(event),
+    )
+
+    return _add_firewall_header(success({
         "marketplace_id": marketplace_id,
         "total_signals": total_signals,
         "by_type": by_type,
@@ -322,4 +356,4 @@ def get_signal_stats(event, context):
             "earliest": earliest,
             "latest": latest,
         },
-    })
+    }))
