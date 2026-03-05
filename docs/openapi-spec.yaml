@@ -9,7 +9,7 @@ info:
     Most endpoints require an API key passed in the `X-API-Key` header.
     
     ## Base URL
-    Production: https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev
+    Production: https://api.agentpier.org
     
     ## Rate Limits
     - Challenge requests: 30/hour per IP
@@ -26,7 +26,7 @@ info:
     url: https://www.apache.org/licenses/LICENSE-2.0
 
 servers:
-  - url: https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev
+  - url: https://api.agentpier.org
     description: Production API
 
 security:
