@@ -31,7 +31,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        "crewai>=0.1.0",
+        "crewai==1.10.1",
         "agentpier>=1.0.0",
         "pydantic>=1.8.0",
     ],
