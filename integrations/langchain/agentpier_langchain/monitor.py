@@ -19,7 +19,7 @@ class ChainMonitor:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev",
+        base_url: str = "https://api.agentpier.org",
         agent_mapping: Optional[Dict[str, str]] = None,
         auto_register: bool = True,
         track_chains: bool = True,

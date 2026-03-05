@@ -39,7 +39,7 @@ class TrustScoreTool(BaseTool):
     """
     args_schema = TrustScoreInput
     
-    def __init__(self, api_key: str, base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev"):
+    def __init__(self, api_key: str, base_url: str = "https://api.agentpier.org"):
         super().__init__()
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
@@ -109,7 +109,7 @@ class AgentVerificationTool(BaseTool):
     """
     args_schema = AgentVerificationInput
     
-    def __init__(self, api_key: str, base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev"):
+    def __init__(self, api_key: str, base_url: str = "https://api.agentpier.org"):
         super().__init__()
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
@@ -182,7 +182,7 @@ class TrustScoreFunction:
     Can be used with LangChain's function calling capabilities or OpenAI's function calling.
     """
     
-    def __init__(self, api_key: str, base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev"):
+    def __init__(self, api_key: str, base_url: str = "https://api.agentpier.org"):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.headers = {"X-API-Key": self.api_key}
