@@ -4,7 +4,8 @@ AgentPier Monitoring for CrewAI
 High-level classes for monitoring CrewAI workflows and verifying trust levels.
 """
 
-import requests
+from agentpier import AgentPier
+from agentpier.exceptions import NotFoundError, AuthenticationError, AgentPierError
 from typing import List, Any, Dict, Optional
 from .callbacks import AgentPierTaskCallback
 
@@ -77,8 +78,7 @@ class TrustVerifier:
         """
         self.api_key = api_key
         self.min_score = min_score
-        self.base_url = base_url.rstrip("/")
-        self.headers = {"X-API-Key": self.api_key}
+        self.client = AgentPier(api_key=api_key, base_url=base_url)
     
     def check_agent(self, agent_id: str) -> Dict[str, Any]:
         """
@@ -91,41 +91,41 @@ class TrustVerifier:
             Dict with trust information and verification status
         """
         try:
-            response = requests.get(
-                f"{self.base_url}/trust/agents/{agent_id}",
-                headers=self.headers,
-                timeout=10
-            )
-            
-            if response.status_code == 404:
-                return {
-                    "agent_id": agent_id,
-                    "found": False,
-                    "verified": False,
-                    "reason": "Agent not found in trust system"
-                }
-            elif response.status_code != 200:
-                return {
-                    "agent_id": agent_id,
-                    "found": False,
-                    "verified": False,
-                    "reason": f"API error: {response.status_code}"
-                }
-            
-            data = response.json()
-            trust_score = data.get('trust_score', 0)
+            # Use SDK to get trust score
+            trust_data = self.client.trust.get_score(agent_id)
             
             return {
                 "agent_id": agent_id,
-                "agent_name": data.get('agent_name', agent_id),
+                "agent_name": trust_data.agent_name,
                 "found": True,
-                "verified": trust_score >= self.min_score,
-                "trust_score": trust_score,
-                "trust_tier": data.get('trust_tier', 'unknown'),
+                "verified": trust_data.trust_score >= self.min_score,
+                "trust_score": trust_data.trust_score,
+                "trust_tier": trust_data.trust_tier,
                 "min_required": self.min_score,
-                "reason": "Meets minimum trust score" if trust_score >= self.min_score else f"Score {trust_score:.1f} below minimum {self.min_score}"
+                "reason": "Meets minimum trust score" if trust_data.trust_score >= self.min_score else f"Score {trust_data.trust_score:.1f} below minimum {self.min_score}"
             }
             
+        except NotFoundError:
+            return {
+                "agent_id": agent_id,
+                "found": False,
+                "verified": False,
+                "reason": "Agent not found in trust system"
+            }
+        except AuthenticationError as e:
+            return {
+                "agent_id": agent_id,
+                "found": False,
+                "verified": False,
+                "reason": f"Authentication error: {str(e)}"
+            }
+        except AgentPierError as e:
+            return {
+                "agent_id": agent_id,
+                "found": False,
+                "verified": False,
+                "reason": f"API error: {str(e)}"
+            }
         except Exception as e:
             return {
                 "agent_id": agent_id,

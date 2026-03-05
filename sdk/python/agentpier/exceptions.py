@@ -99,7 +99,7 @@ def raise_for_status(response, response_data: Optional[Dict[str, Any]] = None):
     elif status_code == 401:
         raise AuthenticationError(message, error_code, status_code, details)
     elif status_code == 403:
-        raise AuthorizationError(message, error_code, status_code, details)
+        raise AuthenticationError(message, error_code, status_code, details)
     elif status_code == 404:
         raise NotFoundError(message, error_code, status_code, details)
     elif status_code == 409:

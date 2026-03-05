@@ -306,18 +306,32 @@ class TestStandardsMethods:
     def test_current_standards(self, mock_get):
         """Test getting current standards."""
         mock_get.return_value = {
-            "version": "1.2.0",
-            "apts_compliance": True,
-            "last_updated": "2024-01-15T12:00:00+00:00"
+            "version": "1.0.0", 
+            "effective_date": "2026-03-04",
+            "standards": {
+                "agent": {
+                    "version": "1.0.0",
+                    "document_url": "/docs/certification-standards-v1.md",
+                    "api_url": "/standards/agent",
+                    "categories": ["reliability", "safety", "transparency", "accountability"]
+                },
+                "marketplace": {
+                    "version": "1.0.0", 
+                    "document_url": "/docs/marketplace-standards-v1.md",
+                    "api_url": "/standards/marketplace",
+                    "dimensions": ["data_quality", "reporting_volume", "fairness", "integration_health", "dispute_resolution"]
+                }
+            }
         }
         
         ap = AgentPier()
         standards = ap.standards.current()
         
         assert isinstance(standards, Standards)
-        assert standards.version == "1.2.0"
-        assert standards.apts_compliance is True
-        assert isinstance(standards.last_updated, datetime)
+        assert standards.version == "1.0.0"
+        assert standards.effective_date == "2026-03-04"
+        assert "agent" in standards.standards
+        assert "marketplace" in standards.standards
 
 
 class TestConvenienceFunctions:

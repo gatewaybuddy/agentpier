@@ -170,8 +170,8 @@ class Badge:
 class Standards:
     """Represents current certification standards."""
     version: str
-    apts_compliance: bool
-    last_updated: datetime
+    effective_date: str
+    standards: Dict[str, Any]
 
 
 @dataclass

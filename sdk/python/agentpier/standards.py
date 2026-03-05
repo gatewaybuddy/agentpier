@@ -1,7 +1,6 @@
 """Standards and certification methods for the AgentPier SDK."""
 
 from typing import Dict, Any
-from datetime import datetime
 
 from .client import AgentPierClient
 from .types import Standards
@@ -18,19 +17,14 @@ class StandardsMethods:
         Get current certification standards.
         
         Returns:
-            Standards object with version, compliance info, and last update
+            Standards object with version, effective date, and standards structure
         """
         response = self.client.get("/standards/current")
         
-        # Parse datetime field
-        last_updated = None
-        if response.get("last_updated"):
-            last_updated = datetime.fromisoformat(response["last_updated"].replace('Z', '+00:00'))
-        
         return Standards(
             version=response["version"],
-            apts_compliance=response["apts_compliance"],
-            last_updated=last_updated or datetime.utcnow()
+            effective_date=response["effective_date"],
+            standards=response["standards"]
         )
     
     def get_version(self) -> str:
@@ -43,28 +37,33 @@ class StandardsMethods:
         standards = self.current()
         return standards.version
     
-    def is_apts_compliant(self) -> bool:
+    def has_agent_standards(self) -> bool:
         """
-        Check if current standards are APTS compliant (convenience method).
+        Check if agent standards are available (convenience method).
         
         Returns:
-            True if current standards are APTS compliant
+            True if agent standards are defined
         """
         standards = self.current()
-        return standards.apts_compliance
+        return "agent" in standards.standards
     
     def get_compliance_info(self) -> Dict[str, Any]:
         """
         Get detailed compliance information.
         
         Returns:
-            Dict with compliance details and standards information
+            Dict with standards details and structure information
         """
         standards = self.current()
+        agent_available = "agent" in standards.standards
+        marketplace_available = "marketplace" in standards.standards
+        
         return {
             "version": standards.version,
-            "apts_compliant": standards.apts_compliance,
-            "last_updated": standards.last_updated.isoformat(),
+            "effective_date": standards.effective_date,
+            "agent_standards_available": agent_available,
+            "marketplace_standards_available": marketplace_available,
             "is_current": True,  # Since we're fetching current standards
-            "summary": f"Standards v{standards.version} ({'APTS compliant' if standards.apts_compliance else 'Not APTS compliant'})"
+            "standards": standards.standards,
+            "summary": f"Standards v{standards.version} (Agent: {'✓' if agent_available else '✗'}, Marketplace: {'✓' if marketplace_available else '✗'})"
         }
