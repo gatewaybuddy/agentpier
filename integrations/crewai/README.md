@@ -15,6 +15,8 @@ Trust scoring integration for CrewAI agents and workflows. Automatically report 
 pip install agentpier-crewai
 ```
 
+> ⚠️ **Installation Time Notice**: First-time installation may take 5+ minutes due to large dependencies (ONNX runtime, PyArrow). This is expected behavior for ML-enabled packages.
+
 ## Quick Start
 
 ### 1. Basic Trust Monitoring
