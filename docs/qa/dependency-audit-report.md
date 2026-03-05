@@ -46,7 +46,21 @@ Security audit of AgentPier packages and their dependencies revealed **3 known v
 None identified in AgentPier-specific code.
 
 ### MEDIUM Priority
-- **diskcache 5.6.3** - Used by CrewAI integration. Need to investigate CVE-2025-69872 details.
+- **diskcache 5.6.3** - Used by CrewAI integration via transitive dependency chain.
+  
+  **CVE-2025-69872 Analysis:**
+  - **Vulnerability:** Unsafe Python pickle deserialization by default
+  - **Impact:** Arbitrary code execution if attacker has write access to cache directory
+  - **Exploitability:** Requires local file system write access to diskcache storage location
+  - **Risk Level:** Medium (requires privileged access to exploit)
+  - **GHSA ID:** GHSA-w8v5-vhqr-4h9v
+  - **Fix Available:** None yet (monitoring for updates)
+  
+  **Mitigation Recommendations:**
+  1. **Immediate:** Verify diskcache storage paths are not world-writable
+  2. **Short-term:** Monitor diskcache GitHub for security updates
+  3. **Long-term:** Consider alternative caching backends if available in CrewAI
+  4. **Environment:** Ensure production containers run with minimal file permissions
 
 ### LOW Priority
 - **pip 24.0** - Development/build tool vulnerabilities. Affects build environment only.
