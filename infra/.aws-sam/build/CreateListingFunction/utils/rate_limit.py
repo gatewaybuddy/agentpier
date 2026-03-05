@@ -32,25 +32,32 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
     pk = f"RATELIMIT#{ip}"
     sk = f"{action}#{now}"
 
-    # Write this request
-    table.put_item(Item={
-        "PK": pk,
-        "SK": sk,
-        "ttl": now + window_seconds,  # Auto-cleanup via DynamoDB TTL
-        "action": action,
-        "timestamp": now,
-    })
+    # Write this request (best-effort — read-only Lambdas may lack PutItem)
+    try:
+        table.put_item(Item={
+            "PK": pk,
+            "SK": sk,
+            "ttl": now + window_seconds,  # Auto-cleanup via DynamoDB TTL
+            "action": action,
+            "timestamp": now,
+        })
+    except Exception:
+        # Fail open: if we can't write, skip rate limiting entirely
+        return True, max_requests, 0
 
     # Count requests in window
-    response = table.query(
-        KeyConditionExpression="PK = :pk AND SK BETWEEN :start AND :end",
-        ExpressionAttributeValues={
-            ":pk": pk,
-            ":start": f"{action}#{window_start}",
-            ":end": f"{action}#{now + 1}",
-        },
-        Select="COUNT",
-    )
+    try:
+        response = table.query(
+            KeyConditionExpression="PK = :pk AND SK BETWEEN :start AND :end",
+            ExpressionAttributeValues={
+                ":pk": pk,
+                ":start": f"{action}#{window_start}",
+                ":end": f"{action}#{now + 1}",
+            },
+            Select="COUNT",
+        )
+    except Exception:
+        return True, max_requests, 0
 
     count = response.get("Count", 0)
     remaining = max(0, max_requests - count)

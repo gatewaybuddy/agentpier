@@ -56,7 +56,7 @@ Resources:
           - '''https://agentpier.org'''
           - '''https://agentpier.org,http://localhost:3000,http://localhost:8080'''
         AllowMethods: '''GET,POST,PATCH,DELETE,OPTIONS'''
-        AllowHeaders: '''Content-Type,X-API-Key,X-Admin-Key,Authorization'''
+        AllowHeaders: '''Content-Type,X-API-Key,X-Admin-Key,X-Marketplace-Key,Authorization'''
   CreateListingFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -519,6 +519,48 @@ Resources:
             Method: GET
     Metadata:
       SamResourceId: TrustSearchFunction
+  ClearinghouseScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-clearinghouse-score-${Stage}
+      Handler: handlers.trust.trust_clearinghouse_score
+      CodeUri: ClearinghouseScoreFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /trust/agents/{agent_id}/clearinghouse-score
+            Method: GET
+    Metadata:
+      SamResourceId: ClearinghouseScoreFunction
+  RecalculateScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-recalculate-score-${Stage}
+      Handler: handlers.trust.trust_recalculate
+      CodeUri: RecalculateScoreFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /trust/agents/{agent_id}/recalculate
+            Method: POST
+    Metadata:
+      SamResourceId: RecalculateScoreFunction
   CreateTransactionFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -732,6 +774,342 @@ Resources:
               Authorizer: NONE
     Metadata:
       SamResourceId: ModerationScanFunction
+  RegisterMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-register-marketplace-${Stage}
+      Handler: handlers.marketplace.register_marketplace
+      CodeUri: RegisterMarketplaceFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/register
+            Method: POST
+    Metadata:
+      SamResourceId: RegisterMarketplaceFunction
+  GetMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-marketplace-${Stage}
+      Handler: handlers.marketplace.get_marketplace
+      CodeUri: GetMarketplaceFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/{id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetMarketplaceFunction
+  UpdateMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-update-marketplace-${Stage}
+      Handler: handlers.marketplace.update_marketplace
+      CodeUri: UpdateMarketplaceFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/{id}
+            Method: PUT
+    Metadata:
+      SamResourceId: UpdateMarketplaceFunction
+  RotateMarketplaceKeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-rotate-marketplace-key-${Stage}
+      Handler: handlers.marketplace.rotate_marketplace_key
+      CodeUri: RotateMarketplaceKeyFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/{id}/rotate-key
+            Method: POST
+    Metadata:
+      SamResourceId: RotateMarketplaceKeyFunction
+  GetMarketplaceScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-marketplace-score-${Stage}
+      Handler: handlers.marketplace.get_marketplace_score
+      CodeUri: GetMarketplaceScoreFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/{id}/score
+            Method: GET
+    Metadata:
+      SamResourceId: GetMarketplaceScoreFunction
+  RecalculateMarketplaceScoreFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-recalculate-marketplace-score-${Stage}
+      Handler: handlers.marketplace.recalculate_marketplace_score
+      CodeUri: RecalculateMarketplaceScoreFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /marketplace/{id}/recalculate-score
+            Method: POST
+    Metadata:
+      SamResourceId: RecalculateMarketplaceScoreFunction
+  IngestSignalsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-ingest-signals-${Stage}
+      Handler: handlers.signals.ingest_signals
+      CodeUri: IngestSignalsFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /trust/signals
+            Method: POST
+    Metadata:
+      SamResourceId: IngestSignalsFunction
+  GetSignalStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-signal-stats-${Stage}
+      Handler: handlers.signals.get_signal_stats
+      CodeUri: GetSignalStatsFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /trust/signals/stats
+            Method: GET
+    Metadata:
+      SamResourceId: GetSignalStatsFunction
+  GetBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-badge-${Stage}
+      Handler: handlers.badges.get_badge
+      CodeUri: GetBadgeFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /badges/{agent_id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetBadgeFunction
+  GetBadgesBatchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-badges-batch-${Stage}
+      Handler: handlers.badges.get_badges_batch
+      CodeUri: GetBadgesBatchFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /badges/batch
+            Method: POST
+    Metadata:
+      SamResourceId: GetBadgesBatchFunction
+  GetBadgeImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-badge-image-${Stage}
+      Handler: handlers.badges.get_badge_image
+      CodeUri: GetBadgeImageFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /badges/{agent_id}/image
+            Method: GET
+    Metadata:
+      SamResourceId: GetBadgeImageFunction
+  VerifyBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-verify-badge-${Stage}
+      Handler: handlers.badges.verify_badge
+      CodeUri: VerifyBadgeFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /badges/{agent_id}/verify
+            Method: GET
+    Metadata:
+      SamResourceId: VerifyBadgeFunction
+  GetMarketplaceBadgeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-marketplace-badge-${Stage}
+      Handler: handlers.badges.get_marketplace_badge
+      CodeUri: GetMarketplaceBadgeFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /badges/marketplace/{marketplace_id}
+            Method: GET
+    Metadata:
+      SamResourceId: GetMarketplaceBadgeFunction
+  GetStandardsCurrentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-standards-current-${Stage}
+      Handler: handlers.standards.get_standards_current
+      CodeUri: GetStandardsCurrentFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /standards/current
+            Method: GET
+    Metadata:
+      SamResourceId: GetStandardsCurrentFunction
+  GetStandardsAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-standards-agent-${Stage}
+      Handler: handlers.standards.get_standards_agent
+      CodeUri: GetStandardsAgentFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /standards/agent
+            Method: GET
+    Metadata:
+      SamResourceId: GetStandardsAgentFunction
+  GetStandardsMarketplaceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: agentpier-get-standards-marketplace-${Stage}
+      Handler: handlers.standards.get_standards_marketplace
+      CodeUri: GetStandardsMarketplaceFunction
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: AgentPierApi
+            Path: /standards/marketplace
+            Method: GET
+    Metadata:
+      SamResourceId: GetStandardsMarketplaceFunction
   AgentPierTable:
     Type: AWS::DynamoDB::Table
     Properties:
