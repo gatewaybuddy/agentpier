@@ -16,6 +16,9 @@ class AgentPierClient:
     Core HTTP client for the AgentPier API.
     
     Handles authentication, rate limiting, retries, and response parsing.
+    
+    Security Note: All error messages are automatically sanitized to prevent 
+    API key exposure in logs or exception traces.
     """
     
     def __init__(
@@ -84,6 +87,30 @@ class AgentPierClient:
             pass
         else:
             raise AgentPierError("API key must start with 'ap_live_' or 'ap_test_' prefix")
+    
+    def _sanitize_api_key(self, text: str) -> str:
+        """
+        Sanitize API keys from error messages and logs.
+        
+        Args:
+            text: Text that might contain API keys
+            
+        Returns:
+            Sanitized text with API keys replaced by placeholder
+        """
+        if not self.api_key or not text:
+            return text
+        
+        # Replace the full API key with a masked version
+        if self.api_key in text:
+            # Show only prefix and last 4 characters for debugging
+            if len(self.api_key) > 8:
+                masked_key = self.api_key[:8] + "****" + self.api_key[-4:]
+            else:
+                masked_key = "ap_****"
+            text = text.replace(self.api_key, masked_key)
+        
+        return text
     
     def _build_url(self, endpoint: str) -> str:
         """Build full URL from endpoint."""
@@ -174,6 +201,7 @@ class AgentPierClient:
         
         last_exception = None
         
+        # SECURITY: All exception messages below are sanitized to prevent API key exposure
         for attempt in range(self.max_retries + 1):
             try:
                 response = requests.request(method, url, **req_kwargs)
@@ -196,7 +224,8 @@ class AgentPierClient:
                 return response_data
                 
             except requests.exceptions.ConnectionError as e:
-                last_exception = NetworkError(f"Connection error: {e}")
+                sanitized_error = self._sanitize_api_key(str(e))
+                last_exception = NetworkError(f"Connection error: {sanitized_error}")
                 if attempt < self.max_retries:
                     delay = self._get_retry_delay(attempt)
                     time.sleep(delay)
@@ -204,7 +233,8 @@ class AgentPierClient:
                 raise last_exception
                 
             except requests.exceptions.Timeout as e:
-                last_exception = NetworkError(f"Request timeout: {e}")
+                sanitized_error = self._sanitize_api_key(str(e))
+                last_exception = NetworkError(f"Request timeout: {sanitized_error}")
                 if attempt < self.max_retries:
                     delay = self._get_retry_delay(attempt)
                     time.sleep(delay)
@@ -213,7 +243,8 @@ class AgentPierClient:
                 
             except requests.exceptions.RequestException as e:
                 # Other requests errors
-                raise NetworkError(f"Request error: {e}")
+                sanitized_error = self._sanitize_api_key(str(e))
+                raise NetworkError(f"Request error: {sanitized_error}")
             
             except AgentPierError:
                 # Re-raise AgentPier errors without retry

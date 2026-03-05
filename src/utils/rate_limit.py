@@ -42,8 +42,9 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
             "timestamp": now,
         })
     except Exception:
-        # Fail open: if we can't write, skip rate limiting entirely
-        return True, max_requests, 0
+        # Fail closed: if we can't write to DynamoDB, assume rate limited
+        # Conservative fallback - reject request when DB is unreachable
+        return False, 0, window_seconds
 
     # Count requests in window
     try:
@@ -57,7 +58,8 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
             Select="COUNT",
         )
     except Exception:
-        return True, max_requests, 0
+        # Fail closed: if we can't query DynamoDB, assume rate limited
+        return False, 0, window_seconds
 
     count = response.get("Count", 0)
     remaining = max(0, max_requests - count)
@@ -79,17 +81,20 @@ def check_auth_failures(event, max_failures=15, window_seconds=300):
     now = int(time.time())
     window_start = now - window_seconds
 
-    response = table.query(
-        KeyConditionExpression="PK = :pk AND SK BETWEEN :start AND :end",
-        ExpressionAttributeValues={
-            ":pk": f"AUTHFAIL#{ip}",
-            ":start": f"FAIL#{window_start}",
-            ":end": f"FAIL#{now + 1}",
-        },
-        Select="COUNT",
-    )
-
-    return response.get("Count", 0) >= max_failures
+    try:
+        response = table.query(
+            KeyConditionExpression="PK = :pk AND SK BETWEEN :start AND :end",
+            ExpressionAttributeValues={
+                ":pk": f"AUTHFAIL#{ip}",
+                ":start": f"FAIL#{window_start}",
+                ":end": f"FAIL#{now + 1}",
+            },
+            Select="COUNT",
+        )
+        return response.get("Count", 0) >= max_failures
+    except Exception:
+        # Fail closed: if we can't query DynamoDB, assume blocked
+        return True
 
 
 def record_auth_failure(event):
@@ -98,9 +103,14 @@ def record_auth_failure(event):
     table = _get_table()
     now = int(time.time())
 
-    table.put_item(Item={
-        "PK": f"AUTHFAIL#{ip}",
-        "SK": f"FAIL#{now}",
-        "ttl": now + 300,  # 5 min TTL
-        "timestamp": now,
-    })
+    try:
+        table.put_item(Item={
+            "PK": f"AUTHFAIL#{ip}",
+            "SK": f"FAIL#{now}",
+            "ttl": now + 300,  # 5 min TTL
+            "timestamp": now,
+        })
+    except Exception:
+        # Best-effort logging - if DynamoDB is down, we can't record failures
+        # but this shouldn't block the calling function
+        pass
