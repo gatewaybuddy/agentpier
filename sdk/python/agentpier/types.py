@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any, Literal, Union
 @dataclass
 class UserProfile:
     """Represents a user profile."""
+
     user_id: str
     username: str
     description: Optional[str] = None
@@ -26,6 +27,7 @@ class UserProfile:
 @dataclass
 class AgentTrustScore:
     """Represents an agent's trust score and details."""
+
     agent_id: str
     agent_name: str
     trust_score: float
@@ -38,7 +40,7 @@ class AgentTrustScore:
     declared_scope: Optional[str] = None
     contact_url: Optional[str] = None
     registered_at: Optional[datetime] = None
-    
+
     # Detailed breakdown
     axes: Optional[Dict[str, float]] = None
     weights: Optional[Dict[str, float]] = None
@@ -49,7 +51,10 @@ class AgentTrustScore:
 @dataclass
 class TrustEvent:
     """Represents a trust event for reporting."""
-    event_type: Literal["task_completion", "transaction", "review", "violation", "certification"]
+
+    event_type: Literal[
+        "task_completion", "transaction", "review", "violation", "certification"
+    ]
     outcome: Literal["success", "failure", "partial", "cancelled"]
     details: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
@@ -58,14 +63,27 @@ class TrustEvent:
 @dataclass
 class Listing:
     """Represents a marketplace listing."""
+
     listing_id: str
     title: str
     description: Optional[str]
     type: Literal["service", "product", "agent_skill", "consulting"]
     category: Literal[
-        "code_review", "research", "automation", "monitoring", "content_creation",
-        "security", "infrastructure", "data_processing", "translation", "trading",
-        "consulting", "design", "testing", "devops", "other"
+        "code_review",
+        "research",
+        "automation",
+        "monitoring",
+        "content_creation",
+        "security",
+        "infrastructure",
+        "data_processing",
+        "translation",
+        "trading",
+        "consulting",
+        "design",
+        "testing",
+        "devops",
+        "other",
     ]
     tags: List[str] = field(default_factory=list)
     price: Optional[float] = None
@@ -75,7 +93,7 @@ class Listing:
     updated_at: Optional[datetime] = None
     owner_id: Optional[str] = None
     owner_username: Optional[str] = None
-    
+
     # Additional fields from detailed view
     location: Optional[Dict[str, str]] = None
     pricing: Optional[Dict[str, Any]] = None
@@ -89,13 +107,26 @@ class Listing:
 @dataclass
 class CreateListingRequest:
     """Request data for creating a new listing."""
+
     title: str
     description: str
     type: Literal["service", "product", "agent_skill", "consulting"]
     category: Literal[
-        "code_review", "research", "automation", "monitoring", "content_creation",
-        "security", "infrastructure", "data_processing", "translation", "trading",
-        "consulting", "design", "testing", "devops", "other"
+        "code_review",
+        "research",
+        "automation",
+        "monitoring",
+        "content_creation",
+        "security",
+        "infrastructure",
+        "data_processing",
+        "translation",
+        "trading",
+        "consulting",
+        "design",
+        "testing",
+        "devops",
+        "other",
     ]
     tags: List[str] = field(default_factory=list)
     price: Optional[float] = None
@@ -109,6 +140,7 @@ class CreateListingRequest:
 @dataclass
 class UpdateListingRequest:
     """Request data for updating a listing."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -120,17 +152,20 @@ class UpdateListingRequest:
 @dataclass
 class Transaction:
     """Represents a transaction."""
+
     transaction_id: str
     listing_id: str
     buyer_id: str
     seller_id: str
     amount: Optional[float]
     currency: str = "USD"
-    status: Literal["pending", "confirmed", "completed", "disputed", "cancelled"] = "pending"
+    status: Literal["pending", "confirmed", "completed", "disputed", "cancelled"] = (
+        "pending"
+    )
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     notes: Optional[str] = None
-    
+
     # Additional fields from detailed view
     consumer_id: Optional[str] = None
     provider_id: Optional[str] = None
@@ -143,6 +178,7 @@ class Transaction:
 @dataclass
 class CreateTransactionRequest:
     """Request data for creating a transaction."""
+
     listing_id: str
     amount: Optional[float] = None
     currency: str = "USD"
@@ -152,6 +188,7 @@ class CreateTransactionRequest:
 @dataclass
 class FishingCatch:
     """Represents a fishing catch result."""
+
     result: Literal["catch", "nothing"]
     catch: Dict[str, Any]
     stats: Dict[str, int]
@@ -161,6 +198,7 @@ class FishingCatch:
 @dataclass
 class Badge:
     """Represents an agent badge."""
+
     badge_url: str
     trust_level: Literal["unverified", "basic", "verified", "certified", "elite"]
     score: float
@@ -169,6 +207,7 @@ class Badge:
 @dataclass
 class Standards:
     """Represents current certification standards."""
+
     version: str
     effective_date: str
     standards: Dict[str, Any]
@@ -177,6 +216,7 @@ class Standards:
 @dataclass
 class Marketplace:
     """Represents a marketplace."""
+
     marketplace_id: str
     name: str
     description: str
@@ -189,6 +229,7 @@ class Marketplace:
 @dataclass
 class MoltbookVerification:
     """Represents Moltbook verification data."""
+
     challenge_code: Optional[str] = None
     moltbook_username: Optional[str] = None
     instructions: Optional[str] = None
@@ -203,6 +244,7 @@ class MoltbookVerification:
 @dataclass
 class SearchResult:
     """Generic search result wrapper."""
+
     results: List[Any]
     count: Optional[int] = None
     next_cursor: Optional[str] = None
@@ -212,6 +254,7 @@ class SearchResult:
 @dataclass
 class Challenge:
     """Registration challenge data."""
+
     challenge_id: str
     challenge: str
     expires_in_seconds: int
@@ -220,6 +263,7 @@ class Challenge:
 @dataclass
 class RegistrationResult:
     """Result of agent registration."""
+
     user_id: str
     username: str
     api_key: str
@@ -229,6 +273,7 @@ class RegistrationResult:
 @dataclass
 class LoginResult:
     """Result of login."""
+
     user_id: str
     username: str
     note: Optional[str] = None
@@ -237,6 +282,7 @@ class LoginResult:
 @dataclass
 class APIKeyRotation:
     """Result of API key rotation."""
+
     user_id: str
     api_key: str
     message: Optional[str] = None

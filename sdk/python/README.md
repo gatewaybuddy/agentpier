@@ -23,6 +23,24 @@ The official Python SDK for the [AgentPier](https://agentpier.org) trust scoring
 pip install agentpier
 ```
 
+## Python Compatibility
+
+The AgentPier Python SDK supports the following Python versions:
+
+- **Python 3.8+** (minimum required version)
+- **Python 3.9** - Fully supported and tested
+- **Python 3.10** - Fully supported and tested  
+- **Python 3.11** - Fully supported and tested
+- **Python 3.12** - Fully supported and tested
+
+### Version-Specific Notes
+
+- **Python 3.8**: Minimum version required for type hints and modern async support
+- **Python 3.9+**: Recommended for optimal performance and latest language features
+- **Python 3.12**: Latest tested version with full feature support
+
+The SDK is automatically tested across these Python versions in our CI pipeline to ensure compatibility and reliability.
+
 ## Quick Start
 
 ### 2-Line Integration

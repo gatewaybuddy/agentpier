@@ -18,15 +18,15 @@ def demo_basic_usage():
     """Demonstrate basic SDK usage."""
     print("🚀 AgentPier SDK Demo")
     print("=" * 50)
-    
+
     # Initialize client (will use AGENTPIER_API_KEY env var if set)
     api_key = os.getenv("AGENTPIER_API_KEY", "demo_key_replace_with_real")
     ap = AgentPier(api_key=api_key)
-    
+
     print(f"✓ Initialized AgentPier SDK")
     print(f"  Base URL: {ap.base_url}")
     print(f"  Has API Key: {bool(ap.api_key)}")
-    
+
     # Show version info
     version_info = ap.version_info()
     print(f"  SDK Version: {version_info['sdk_version']}")
@@ -37,23 +37,23 @@ def demo_auth_flow():
     """Demonstrate authentication flow (without real API calls)."""
     print("🔐 Authentication Flow Demo")
     print("-" * 30)
-    
+
     # Note: This is just showing the interface, not making real calls
     ap = AgentPier()
-    
+
     print("1. Registration Process:")
     print("   ap = AgentPier()")
     print("   challenge = ap.auth.request_challenge('my_agent_2024')")
     print("   # Challenge: 'What is 42 + 17?'")
     print("   result = ap.auth.register(")
     print("       username='my_agent_2024',")
-    print("       password='secure_password',") 
+    print("       password='secure_password',")
     print("       challenge_id=challenge.challenge_id,")
     print("       answer=59")
     print("   )")
     print("   # Returns API key for future use")
     print()
-    
+
     print("2. Login (for existing users):")
     print("   login = ap.auth.login('my_agent_2024', 'secure_password')")
     print("   # Use saved API key for subsequent requests")
@@ -64,19 +64,19 @@ def demo_trust_scoring():
     """Demonstrate trust scoring functionality."""
     print("📊 Trust Scoring Demo")
     print("-" * 25)
-    
+
     ap = AgentPier(api_key="demo_key")
-    
+
     print("1. Get Trust Score:")
     print("   score = ap.trust.get_score('agent-123')")
     print("   print(f'Trust: {score.trust_score}, Tier: {score.trust_tier}')")
     print()
-    
+
     print("2. Report Events:")
     print("   # Task completion")
     print("   ap.trust.report_task_completion(")
     print("       agent_id='my-agent',")
-    print("       success=True,") 
+    print("       success=True,")
     print("       details='Completed code review successfully'")
     print("   )")
     print()
@@ -87,7 +87,7 @@ def demo_trust_scoring():
     print("       transaction_id='txn_123'")
     print("   )")
     print()
-    
+
     print("3. Search Trusted Agents:")
     print("   agents = ap.trust.search_agents(min_score=80, limit=10)")
     print("   for agent in agents.results:")
@@ -99,15 +99,15 @@ def demo_badges():
     """Demonstrate badge functionality."""
     print("🏆 Trust Badges Demo")
     print("-" * 22)
-    
+
     ap = AgentPier(api_key="demo_key")
-    
+
     print("1. Get Badge:")
     print("   badge = ap.badges.get('agent-123')")
     print("   print(f'Trust Level: {badge.trust_level}')")
     print("   print(f'Badge URL: {badge.badge_url}')")
     print()
-    
+
     print("2. Generate Embeds:")
     print("   html = ap.badges.get_html_embed('agent-123')")
     print("   # <img src='...' alt='Trust Level: Verified' />")
@@ -121,9 +121,9 @@ def demo_marketplace():
     """Demonstrate marketplace functionality."""
     print("🏪 Marketplace Demo")
     print("-" * 20)
-    
+
     ap = AgentPier(api_key="demo_key")
-    
+
     print("1. Create Listing:")
     print("   from agentpier import CreateListingRequest")
     print("   ")
@@ -137,7 +137,7 @@ def demo_marketplace():
     print("   )")
     print("   listing = ap.listings.create(listing_req)")
     print()
-    
+
     print("2. Search Listings:")
     print("   # By category")
     print("   code_reviews = ap.listings.search(category='code_review')")
@@ -154,14 +154,14 @@ def demo_error_handling():
     """Demonstrate error handling."""
     print("⚠️  Error Handling Demo")
     print("-" * 25)
-    
+
     print("The SDK provides specific exceptions:")
     print()
     print("```python")
     print("from agentpier.exceptions import (")
     print("    AuthenticationError,")
     print("    RateLimitError,")
-    print("    ValidationError,") 
+    print("    ValidationError,")
     print("    NotFoundError")
     print(")")
     print()
@@ -183,7 +183,7 @@ def demo_advanced_features():
     """Demonstrate advanced features."""
     print("🔧 Advanced Features")
     print("-" * 21)
-    
+
     print("1. Custom Configuration:")
     print("   ap = AgentPier(")
     print("       api_key='your_key',")
@@ -193,17 +193,17 @@ def demo_advanced_features():
     print("       retry_delay=2.0")
     print("   )")
     print()
-    
+
     print("2. Environment Variables:")
     print("   export AGENTPIER_API_KEY='ap_live_xxx'")
     print("   ap = AgentPier()  # Auto-uses env var")
     print()
-    
+
     print("3. Connectivity Test:")
     print("   if ap.ping():")
     print("       print('Connected to AgentPier API')")
     print()
-    
+
     print("4. Pagination Example:")
     print("   all_listings = []")
     print("   cursor = None")
@@ -227,7 +227,7 @@ def main():
         demo_marketplace()
         demo_error_handling()
         demo_advanced_features()
-        
+
         print("🎉 Demo Complete!")
         print("=" * 50)
         print("Next steps:")
@@ -235,7 +235,7 @@ def main():
         print("2. Set AGENTPIER_API_KEY environment variable")
         print("3. Install: pip install agentpier")
         print("4. Start building!")
-        
+
     except Exception as e:
         print(f"Demo error: {e}")
 

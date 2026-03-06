@@ -28,7 +28,7 @@ setup(
         "Bug Tracker": "https://github.com/gatewaybuddy/agentpier/issues",
         "Documentation": "https://docs.agentpier.org",
         "Source": "https://github.com/gatewaybuddy/agentpier",
-        "API Reference": "https://api.agentpier.org/docs"
+        "API Reference": "https://api.agentpier.org/docs",
     },
     packages=find_packages(),
     classifiers=[
@@ -40,7 +40,7 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8", 
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
@@ -59,20 +59,20 @@ setup(
             "black>=22.0",
             "flake8>=4.0",
             "mypy>=0.900",
-            "twine>=4.0"
+            "twine>=4.0",
         ]
     },
     keywords=[
         "agentpier",
         "trust",
         "ai",
-        "agents", 
+        "agents",
         "marketplace",
         "reputation",
         "scoring",
         "api",
-        "sdk"
+        "sdk",
     ],
     zip_safe=False,
-    include_package_data=True
+    include_package_data=True,
 )

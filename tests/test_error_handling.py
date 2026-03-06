@@ -1,6 +1,7 @@
 """Tests for SDK error handling scenarios."""
 
 import pytest
+import requests
 import requests_mock
 from unittest.mock import Mock
 
@@ -15,7 +16,8 @@ from agentpier.exceptions import (
     ServerError,
     NetworkError,
     ConflictError,
-    PaymentRequiredError
+    PaymentRequiredError,
+    APIError
 )
 
 
@@ -330,3 +332,78 @@ class TestSDKErrorHandling:
             
             # Should only have made one request (no retry)
             assert m.call_count == 1
+    
+    def test_api_error_fallback_4xx(self):
+        """Test that other 4xx errors raise APIError as fallback."""
+        with requests_mock.Mocker() as m:
+            # Test 418 I'm a teapot (uncommon 4xx that doesn't have specific mapping)
+            m.get(
+                "https://api.agentpier.org/test",
+                status_code=418,
+                json={
+                    "error": "teapot_error",
+                    "message": "I'm a teapot"
+                }
+            )
+            
+            with pytest.raises(APIError) as exc_info:
+                self.client.get("/test")
+            
+            assert exc_info.value.status_code == 418
+            assert "I'm a teapot" in str(exc_info.value)
+            assert exc_info.value.response_data["error"] == "teapot_error"
+    
+    def test_api_error_fallback_422(self):
+        """Test that 422 Unprocessable Entity raises APIError."""
+        with requests_mock.Mocker() as m:
+            m.post(
+                "https://api.agentpier.org/test",
+                status_code=422,
+                json={
+                    "error": "unprocessable_entity",
+                    "message": "The request was well-formed but contains semantic errors"
+                }
+            )
+            
+            with pytest.raises(APIError) as exc_info:
+                self.client.post("/test", json_data={"field": "invalid_value"})
+            
+            assert exc_info.value.status_code == 422
+            assert "semantic errors" in str(exc_info.value)
+    
+    def test_authorization_error_direct_usage(self):
+        """Test AuthorizationError can be raised directly (even if not used in raise_for_status)."""
+        from agentpier.exceptions import AuthorizationError
+        
+        # Test that AuthorizationError can be instantiated and has expected attributes
+        error = AuthorizationError(
+            "Access denied to resource",
+            error_code="access_denied",
+            status_code=403,
+            details="User lacks required permission"
+        )
+        
+        assert error.message == "Access denied to resource"
+        assert error.error_code == "access_denied"
+        assert error.status_code == 403
+        assert error.details == "User lacks required permission"
+        assert isinstance(error, AgentPierError)  # Inherits from base
+    
+    def test_all_exception_types_inherit_from_base(self):
+        """Test that all exception types properly inherit from AgentPierError."""
+        from agentpier.exceptions import (
+            AuthenticationError, AuthorizationError, NotFoundError, ValidationError,
+            ConflictError, RateLimitError, ServerError, PaymentRequiredError,
+            NetworkError, APIError
+        )
+        
+        # Test each exception type inherits from AgentPierError
+        exceptions_to_test = [
+            AuthenticationError, AuthorizationError, NotFoundError, ValidationError,
+            ConflictError, RateLimitError, ServerError, PaymentRequiredError,
+            NetworkError, APIError
+        ]
+        
+        for exception_class in exceptions_to_test:
+            error = exception_class("test message")
+            assert isinstance(error, AgentPierError), f"{exception_class.__name__} should inherit from AgentPierError"
