@@ -4,6 +4,7 @@ AgentPier Python SDK
 Trust infrastructure for AI agent marketplaces.
 """
 
+from typing import Optional
 from .client import AgentPierClient
 from .auth import AuthMethods
 from .trust import TrustMethods
@@ -49,7 +50,7 @@ class AgentPier:
 
     def __init__(
         self,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         base_url: str = "https://api.agentpier.org",
         timeout: float = 30.0,
         max_retries: int = 3,
@@ -99,7 +100,7 @@ class AgentPier:
         self._client.set_api_key(api_key)
 
     @property
-    def api_key(self) -> str:
+    def api_key(self) -> Optional[str]:
         """Get the current API key."""
         return self._client.api_key
 
@@ -138,7 +139,7 @@ class AgentPier:
 
 
 # Convenience function for quick initialization
-def client(api_key: str = None, **kwargs) -> AgentPier:
+def client(api_key: Optional[str] = None, **kwargs) -> AgentPier:
     """
     Create an AgentPier client instance (convenience function).
 

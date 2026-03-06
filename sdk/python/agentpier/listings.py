@@ -28,7 +28,7 @@ class ListingMethods:
             AuthenticationError: If API key is invalid
             PaymentRequiredError: If listing limit exceeded (upgrade required)
         """
-        data = {
+        data: Dict[str, Any] = {
             "title": listing.title,
             "description": listing.description,
             "type": listing.type,
@@ -140,7 +140,7 @@ class ListingMethods:
             AuthenticationError: If API key is invalid
             NotFoundError: If listing not found
         """
-        data = {}
+        data: Dict[str, Any] = {}
 
         if updates.title is not None:
             data["title"] = updates.title
@@ -200,7 +200,7 @@ class ListingMethods:
         Returns:
             SearchResult with list of Listing objects
         """
-        params = {"limit": limit}
+        params: Dict[str, Any] = {"limit": limit}
 
         if query is not None:
             params["q"] = query

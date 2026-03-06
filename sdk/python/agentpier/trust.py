@@ -1,6 +1,6 @@
 """Trust scoring methods for the AgentPier SDK."""
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime
 
 from .client import AgentPierClient
@@ -100,7 +100,7 @@ class TrustMethods:
         Returns:
             SearchResult with list of AgentTrustScore objects
         """
-        params = {"limit": limit}
+        params: Dict[str, Any] = {"limit": limit}
         if query is not None:
             params["q"] = query
         if min_score is not None:
@@ -153,7 +153,7 @@ class TrustMethods:
             AuthenticationError: If API key is invalid
             NotFoundError: If agent not found
         """
-        data = {"event_type": event.event_type, "outcome": event.outcome}
+        data: Dict[str, Any] = {"event_type": event.event_type, "outcome": event.outcome}
 
         if event.details is not None:
             data["details"] = event.details
@@ -194,7 +194,7 @@ class TrustMethods:
     def report_transaction_outcome(
         self,
         agent_id: str,
-        outcome: str,
+        outcome: Literal['success', 'failure', 'partial', 'cancelled'],
         details: Optional[str] = None,
         transaction_id: Optional[str] = None,
     ) -> Dict[str, Any]:

@@ -194,7 +194,7 @@ class AuthMethods:
             ValidationError: If any field validation fails
             AuthenticationError: If API key is invalid
         """
-        data = {}
+        data: Dict[str, Any] = {}
         if display_name is not None:
             data["display_name"] = display_name
         if description is not None:
