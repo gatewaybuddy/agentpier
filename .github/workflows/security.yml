@@ -50,14 +50,14 @@ jobs:
       run: |
         cd sdk/python
         pip-audit --format=json --output=sdk-audit.json || true
-        pip-audit --desc --format=table
+        pip-audit --desc
 
     - name: Run pip-audit on CrewAI integration
       run: |
         cd integrations/crewai
         if pip list | grep -q crewai; then
           pip-audit --format=json --output=crewai-audit.json || true
-          pip-audit --desc --format=table || echo "CrewAI audit failed"
+          pip-audit --desc || echo "CrewAI audit failed"
         else
           echo "CrewAI not installed, skipping audit"
           echo '{"vulnerabilities": []}' > crewai-audit.json
@@ -69,7 +69,7 @@ jobs:
         cd integrations/langchain
         if pip list | grep -q langchain; then
           pip-audit --format=json --output=langchain-audit.json || true
-          pip-audit --desc --format=table || echo "Langchain audit failed"
+          pip-audit --desc || echo "Langchain audit failed"
         else
           echo "Langchain not installed, skipping audit"
           echo '{"vulnerabilities": []}' > langchain-audit.json
