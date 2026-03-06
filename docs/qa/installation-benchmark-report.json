@@ -1,0 +1,54 @@
+{
+  "summary": {
+    "total_runs": 1,
+    "components": {
+      "agentpier-sdk": {
+        "avg_duration": 3.15,
+        "min_duration": 3.15,
+        "max_duration": 3.15,
+        "success_rate": 1.0,
+        "total_runs": 1
+      },
+      "agentpier-crewai": {
+        "avg_duration": 0,
+        "success_rate": 0,
+        "total_runs": 1,
+        "note": "All installations failed"
+      },
+      "agentpier-langchain": {
+        "avg_duration": 0,
+        "success_rate": 0,
+        "total_runs": 1,
+        "note": "All installations failed"
+      }
+    },
+    "generated_at": "2026-03-06 12:33:27"
+  },
+  "detailed_results": [
+    {
+      "timestamp": 1772818388.8944345,
+      "datetime": "2026-03-06 12:33:08",
+      "python_version": "3.12.3 (main, Jan 22 2026, 20:57:42) [GCC 13.3.0]",
+      "benchmarks": [
+        {
+          "component": "agentpier-sdk",
+          "package_spec": "-e /mnt/d/Projects/agentpier/sdk/python",
+          "duration_seconds": 3.15,
+          "success": true
+        },
+        {
+          "component": "agentpier-crewai",
+          "package_spec": "-e /mnt/d/Projects/agentpier/integrations/crewai",
+          "duration_seconds": 2.53,
+          "success": false
+        },
+        {
+          "component": "agentpier-langchain",
+          "package_spec": "-e /mnt/d/Projects/agentpier/integrations/langchain",
+          "duration_seconds": 1.93,
+          "success": false
+        }
+      ]
+    }
+  ]
+}
