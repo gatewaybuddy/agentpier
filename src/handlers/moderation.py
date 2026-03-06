@@ -20,8 +20,18 @@ from utils.response import success, error, handler
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
 # Bait keywords that often appear in borderline/evasion content
-_BAIT_WORDS = ["services", "available", "contact", "telegram", "discord", "dm me",
-               "fast delivery", "guaranteed", "cheap", "wholesale"]
+_BAIT_WORDS = [
+    "services",
+    "available",
+    "contact",
+    "telegram",
+    "discord",
+    "dm me",
+    "fast delivery",
+    "guaranteed",
+    "cheap",
+    "wholesale",
+]
 
 
 def _get_table():
@@ -63,7 +73,7 @@ def _check_evasion_signals(listings):
             signals.append(f"high_unicode_density ({non_ascii}/{len(combined)})")
 
         # Spaced-out words (e.g. "c o c a i n e")
-        spaced = re.findall(r'\b\w(?:\s\w){3,}\b', combined)
+        spaced = re.findall(r"\b\w(?:\s\w){3,}\b", combined)
         if spaced:
             signals.append(f"spaced_out_words: {spaced[:3]}")
 
@@ -73,11 +83,13 @@ def _check_evasion_signals(listings):
             signals.append(f"bait_keyword_cluster ({bait_count})")
 
         if signals:
-            suspicious.append({
-                "listing_id": listing.get("listing_id", ""),
-                "title": title[:80],
-                "signals": signals,
-            })
+            suspicious.append(
+                {
+                    "listing_id": listing.get("listing_id", ""),
+                    "title": title[:80],
+                    "signals": signals,
+                }
+            )
     return suspicious
 
 
@@ -112,13 +124,15 @@ def moderation_scan(event, context):
         is_clean, flagged = check_listing_content(title, desc, tags)
         if not is_clean:
             lid = listing.get("listing_id", listing["PK"].replace("LISTING#", ""))
-            violations.append({
-                "listing_id": lid,
-                "title": title[:80],
-                "posted_by": listing.get("posted_by", ""),
-                "agent_name": listing.get("agent_name", ""),
-                "flagged_categories": flagged,
-            })
+            violations.append(
+                {
+                    "listing_id": lid,
+                    "title": title[:80],
+                    "posted_by": listing.get("posted_by", ""),
+                    "agent_name": listing.get("agent_name", ""),
+                    "flagged_categories": flagged,
+                }
+            )
             # Auto-remove
             _remove_listing(table, lid)
         else:
@@ -146,12 +160,14 @@ def moderation_scan(event, context):
     }
 
     # Log the report to DynamoDB for historical tracking
-    table.put_item(Item={
-        "PK": "MODERATION#SCAN",
-        "SK": datetime.now(timezone.utc).isoformat(),
-        "report": json.loads(json.dumps(report, default=str)),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
+    table.put_item(
+        Item={
+            "PK": "MODERATION#SCAN",
+            "SK": datetime.now(timezone.utc).isoformat(),
+            "report": json.loads(json.dumps(report, default=str)),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
 
     print(json.dumps(report, indent=2, default=str))
     return report
@@ -160,7 +176,7 @@ def moderation_scan(event, context):
 @handler
 def moderation_scan_api(event, context):
     """POST /admin/moderation-scan — API-triggered moderation scan.
-    
+
     Requires admin API key via X-Admin-Key header.
     """
     admin_key = os.environ.get("ADMIN_API_KEY", "")

@@ -39,8 +39,10 @@ def _get_marketplace_scores_map(table) -> dict:
     scores = {}
     try:
         from boto3.dynamodb.conditions import Attr
+
         response = table.scan(
-            FilterExpression=Attr("SK").eq("PROFILE") & Attr("PK").begins_with("MARKETPLACE#"),
+            FilterExpression=Attr("SK").eq("PROFILE")
+            & Attr("PK").begins_with("MARKETPLACE#"),
         )
         for item in response.get("Items", []):
             mp_id = item.get("marketplace_id", "")
@@ -234,19 +236,21 @@ def verify_badge(event, context):
     timestamp = badge["last_updated"]
     signature = _generate_signature(agent_id, tier, score, timestamp)
 
-    return success({
-        "agent_id": agent_id,
-        "agent_name": agent_name,
-        "tier": tier,
-        "overall_score": score,
-        "dimensions": badge.get("dimensions", {}),
-        "confidence": badge.get("confidence", 0.2),
-        "last_updated": timestamp,
-        "valid_until": badge.get("valid_until", ""),
-        "signature": signature,
-        "signature_algorithm": "HMAC-SHA256",
-        "signed_fields": "agent_id:tier:overall_score:last_updated",
-    })
+    return success(
+        {
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "tier": tier,
+            "overall_score": score,
+            "dimensions": badge.get("dimensions", {}),
+            "confidence": badge.get("confidence", 0.2),
+            "last_updated": timestamp,
+            "valid_until": badge.get("valid_until", ""),
+            "signature": signature,
+            "signature_algorithm": "HMAC-SHA256",
+            "signed_fields": "agent_id:tier:overall_score:last_updated",
+        }
+    )
 
 
 # === GET /badges/marketplace/{marketplace_id} ===
@@ -265,9 +269,7 @@ def get_marketplace_badge(event, context):
         return error("marketplace_id is required", "missing_id")
 
     table = _get_table()
-    resp = table.get_item(
-        Key={"PK": f"MARKETPLACE#{marketplace_id}", "SK": "PROFILE"}
-    )
+    resp = table.get_item(Key={"PK": f"MARKETPLACE#{marketplace_id}", "SK": "PROFILE"})
     item = resp.get("Item")
     if not item:
         return not_found("Marketplace not found")
@@ -281,18 +283,24 @@ def get_marketplace_badge(event, context):
     dimensions = {}
     if dimensions_raw:
         try:
-            dimensions = json.loads(dimensions_raw) if isinstance(dimensions_raw, str) else dimensions_raw
+            dimensions = (
+                json.loads(dimensions_raw)
+                if isinstance(dimensions_raw, str)
+                else dimensions_raw
+            )
         except (json.JSONDecodeError, TypeError):
             pass
 
-    return success({
-        "marketplace_id": marketplace_id,
-        "name": item.get("name", ""),
-        "tier": tier,
-        "overall_score": score,
-        "dimensions": dimensions,
-        "badge_image_url": f"/badges/marketplace/{marketplace_id}/image?tier={tier}",
-        "verification_url": f"/badges/marketplace/{marketplace_id}/verify",
-        "valid_until": valid_until,
-        "last_updated": item.get("last_scored_at", now.isoformat()),
-    })
+    return success(
+        {
+            "marketplace_id": marketplace_id,
+            "name": item.get("name", ""),
+            "tier": tier,
+            "overall_score": score,
+            "dimensions": dimensions,
+            "badge_image_url": f"/badges/marketplace/{marketplace_id}/image?tier={tier}",
+            "verification_url": f"/badges/marketplace/{marketplace_id}/verify",
+            "valid_until": valid_until,
+            "last_updated": item.get("last_scored_at", now.isoformat()),
+        }
+    )

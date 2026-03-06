@@ -464,24 +464,37 @@ MARKETPLACE_STANDARDS = {
 @handler
 def get_standards_current(event, context):
     """Returns current standards version info and document URLs."""
-    return success({
-        "version": STANDARDS_VERSION,
-        "effective_date": STANDARDS_EFFECTIVE_DATE,
-        "standards": {
-            "agent": {
-                "version": STANDARDS_VERSION,
-                "document_url": "/docs/certification-standards-v1.md",
-                "api_url": "/standards/agent",
-                "categories": ["reliability", "safety", "transparency", "accountability"],
+    return success(
+        {
+            "version": STANDARDS_VERSION,
+            "effective_date": STANDARDS_EFFECTIVE_DATE,
+            "standards": {
+                "agent": {
+                    "version": STANDARDS_VERSION,
+                    "document_url": "/docs/certification-standards-v1.md",
+                    "api_url": "/standards/agent",
+                    "categories": [
+                        "reliability",
+                        "safety",
+                        "transparency",
+                        "accountability",
+                    ],
+                },
+                "marketplace": {
+                    "version": STANDARDS_VERSION,
+                    "document_url": "/docs/marketplace-standards-v1.md",
+                    "api_url": "/standards/marketplace",
+                    "dimensions": [
+                        "data_quality",
+                        "reporting_volume",
+                        "fairness",
+                        "integration_health",
+                        "dispute_resolution",
+                    ],
+                },
             },
-            "marketplace": {
-                "version": STANDARDS_VERSION,
-                "document_url": "/docs/marketplace-standards-v1.md",
-                "api_url": "/standards/marketplace",
-                "dimensions": ["data_quality", "reporting_volume", "fairness", "integration_health", "dispute_resolution"],
-            },
-        },
-    })
+        }
+    )
 
 
 # === GET /standards/agent ===

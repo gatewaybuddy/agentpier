@@ -19,7 +19,10 @@ from utils.response import success, error, not_found, unauthorized, too_many_req
 from utils.auth import authenticate
 from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure
 from utils.moltbook import (
-    fetch_trust_metrics, MoltbookError, MoltbookNotFoundError, MoltbookAPIError,
+    fetch_trust_metrics,
+    MoltbookError,
+    MoltbookNotFoundError,
+    MoltbookAPIError,
 )
 
 from decimal import Decimal
@@ -68,14 +71,20 @@ def calculate_enhanced_trust_score(moltbook_profile):
         return {
             "trust_score": 0,
             "breakdown": {
-                "karma": 0, "account_age": 0,
-                "social_proof": 0, "activity": 0,
+                "karma": 0,
+                "account_age": 0,
+                "social_proof": 0,
+                "activity": 0,
             },
             "raw": {
-                "karma": 0, "account_age_days": 0,
-                "follower_count": 0, "following_count": 0,
-                "posts_count": 0, "comments_count": 0,
-                "is_claimed": False, "is_active": agent.get("is_active", False),
+                "karma": 0,
+                "account_age_days": 0,
+                "follower_count": 0,
+                "following_count": 0,
+                "posts_count": 0,
+                "comments_count": 0,
+                "is_claimed": False,
+                "is_active": agent.get("is_active", False),
             },
         }
 
@@ -162,7 +171,11 @@ def moltbook_verify_initiate(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{moltbook_username}' not found")
     except MoltbookAPIError as e:
-        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
+        return error(
+            "Moltbook service temporarily unavailable. Try again later.",
+            "moltbook_unavailable",
+            503,
+        )
 
     agent_data = profile.get("agent", {})
     if not agent_data.get("is_claimed", False):
@@ -175,7 +188,8 @@ def moltbook_verify_initiate(event, context):
     if user.get("moltbook_verified"):
         return error(
             f"Already linked to Moltbook account '{user.get('moltbook_name')}'. Unlink first.",
-            "already_linked", 409,
+            "already_linked",
+            409,
         )
 
     # Generate challenge code
@@ -185,25 +199,31 @@ def moltbook_verify_initiate(event, context):
     table = _get_table()
 
     # Store the challenge (PK=USER#{id}, SK=MOLTBOOK_CHALLENGE)
-    table.put_item(Item={
-        "PK": f"USER#{user_id}",
-        "SK": "MOLTBOOK_CHALLENGE",
-        "challenge_code": challenge_code,
-        "moltbook_username": moltbook_username,
-        "created_at": now,
-        "expires_at": str(int(datetime.now(timezone.utc).timestamp()) + CHALLENGE_TTL_SECONDS),
-    })
+    table.put_item(
+        Item={
+            "PK": f"USER#{user_id}",
+            "SK": "MOLTBOOK_CHALLENGE",
+            "challenge_code": challenge_code,
+            "moltbook_username": moltbook_username,
+            "created_at": now,
+            "expires_at": str(
+                int(datetime.now(timezone.utc).timestamp()) + CHALLENGE_TTL_SECONDS
+            ),
+        }
+    )
 
-    return success({
-        "challenge_code": challenge_code,
-        "moltbook_username": moltbook_username,
-        "instructions": (
-            f"Add '{challenge_code}' to your Moltbook profile description, "
-            f"then call POST /moltbook/verify/confirm to complete verification. "
-            f"The challenge expires in 30 minutes."
-        ),
-        "expires_in_seconds": CHALLENGE_TTL_SECONDS,
-    })
+    return success(
+        {
+            "challenge_code": challenge_code,
+            "moltbook_username": moltbook_username,
+            "instructions": (
+                f"Add '{challenge_code}' to your Moltbook profile description, "
+                f"then call POST /moltbook/verify/confirm to complete verification. "
+                f"The challenge expires in 30 minutes."
+            ),
+            "expires_in_seconds": CHALLENGE_TTL_SECONDS,
+        }
+    )
 
 
 # === POST /moltbook/verify/confirm — Confirm challenge-response verification ===
@@ -250,7 +270,11 @@ def moltbook_verify_confirm(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{moltbook_username}' no longer exists")
     except MoltbookAPIError as e:
-        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
+        return error(
+            "Moltbook service temporarily unavailable. Try again later.",
+            "moltbook_unavailable",
+            503,
+        )
 
     agent_data = profile.get("agent", {})
     description = agent_data.get("description", "") or ""
@@ -273,7 +297,7 @@ def moltbook_verify_confirm(event, context):
             account_age_days = max(0, (datetime.now(timezone.utc) - created_at).days)
         except (ValueError, TypeError):
             pass
-    
+
     if account_age_days < 7:
         return error(
             "Moltbook account must be at least 7 days old for identity verification",
@@ -286,6 +310,7 @@ def moltbook_verify_confirm(event, context):
 
     # Update user record with verified Moltbook identity
     from decimal import Decimal
+
     table.update_item(
         Key={"PK": f"USER#{user_id}", "SK": "META"},
         UpdateExpression=(
@@ -312,7 +337,9 @@ def moltbook_verify_confirm(event, context):
             ":mvm": "challenge_response",
             ":mts": Decimal(str(trust_result["trust_score"])),
             ":mlr": now,  # Set last refreshed to now
-            ":ts": Decimal(str(trust_result["trust_score"] / 100)),  # normalize to 0-1 for existing field
+            ":ts": Decimal(
+                str(trust_result["trust_score"] / 100)
+            ),  # normalize to 0-1 for existing field
             ":tb": {k: Decimal(str(v)) for k, v in trust_result["breakdown"].items()},
             ":now": now,
         },
@@ -321,18 +348,20 @@ def moltbook_verify_confirm(event, context):
     # Clean up the challenge
     table.delete_item(Key={"PK": f"USER#{user_id}", "SK": "MOLTBOOK_CHALLENGE"})
 
-    return success({
-        "verified": True,
-        "moltbook_username": moltbook_username,
-        "verification_method": "challenge_response",
-        "trust_score": trust_result["trust_score"],
-        "trust_breakdown": trust_result["breakdown"],
-        "raw_signals": trust_result["raw"],
-        "message": (
-            f"Successfully verified as '{moltbook_username}' on Moltbook. "
-            f"You can now remove the challenge code from your profile description."
-        ),
-    })
+    return success(
+        {
+            "verified": True,
+            "moltbook_username": moltbook_username,
+            "verification_method": "challenge_response",
+            "trust_score": trust_result["trust_score"],
+            "trust_breakdown": trust_result["breakdown"],
+            "raw_signals": trust_result["raw"],
+            "message": (
+                f"Successfully verified as '{moltbook_username}' on Moltbook. "
+                f"You can now remove the challenge code from your profile description."
+            ),
+        }
+    )
 
 
 # === GET /moltbook/trust/{username} — Public trust score lookup ===
@@ -351,28 +380,36 @@ def moltbook_trust(event, context):
     except MoltbookNotFoundError:
         return not_found(f"Moltbook agent '{username}' not found")
     except MoltbookAPIError as e:
-        return error("Moltbook service temporarily unavailable. Try again later.", "moltbook_unavailable", 503)
+        return error(
+            "Moltbook service temporarily unavailable. Try again later.",
+            "moltbook_unavailable",
+            503,
+        )
 
     trust_result = calculate_enhanced_trust_score(profile)
     agent_data = profile.get("agent", {})
 
-    return success({
-        "moltbook_username": username,
-        "display_name": agent_data.get("display_name", username),
-        "description": agent_data.get("description", ""),
-        "trust_score": trust_result["trust_score"],
-        "trust_breakdown": trust_result["breakdown"],
-        "raw_signals": trust_result["raw"],
-        "last_active": agent_data.get("last_active", ""),
-        "is_verified": agent_data.get("is_verified", False),
-    })
+    return success(
+        {
+            "moltbook_username": username,
+            "display_name": agent_data.get("display_name", username),
+            "description": agent_data.get("description", ""),
+            "trust_score": trust_result["trust_score"],
+            "trust_breakdown": trust_result["breakdown"],
+            "raw_signals": trust_result["raw"],
+            "last_active": agent_data.get("last_active", ""),
+            "is_verified": agent_data.get("is_verified", False),
+        }
+    )
 
 
 # === POST /moltbook/unlink — Remove Moltbook identity link ===
 def moltbook_unlink(event, context):
     """Remove Moltbook link from AgentPier profile. Resets trust score."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     user = authenticate(event)
     if not user:
@@ -399,8 +436,10 @@ def moltbook_unlink(event, context):
         },
     )
 
-    return success({
-        "unlinked": True,
-        "trust_score": 0.0,
-        "message": "Moltbook account unlinked. Trust score reset.",
-    })
+    return success(
+        {
+            "unlinked": True,
+            "trust_score": 0.0,
+            "message": "Moltbook account unlinked. Trust score reset.",
+        }
+    )

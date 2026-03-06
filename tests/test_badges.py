@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 from tests.conftest import make_api_event
 
-
 # === Fixtures ===
+
 
 @pytest.fixture
 def sample_agent(dynamodb):
@@ -19,19 +19,21 @@ def sample_agent(dynamodb):
     agent_id = "agent-test-badge-001"
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"AGENT#{agent_id}",
-        "SK": "PROFILE",
-        "agent_id": agent_id,
-        "agent_name": "BadgeTestBot",
-        "capabilities": ["sandbox_execution"],
-        "declared_scope": "read_only",
-        "description": "A test agent for badge tests",
-        "registered_at": now,
-        "trust_score": "72",
-        "trust_tier": "trusted",
-        "last_scored_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"AGENT#{agent_id}",
+            "SK": "PROFILE",
+            "agent_id": agent_id,
+            "agent_name": "BadgeTestBot",
+            "capabilities": ["sandbox_execution"],
+            "declared_scope": "read_only",
+            "description": "A test agent for badge tests",
+            "registered_at": now,
+            "trust_score": "72",
+            "trust_tier": "trusted",
+            "last_scored_at": now,
+        }
+    )
 
     return agent_id
 
@@ -44,17 +46,19 @@ def sample_agent_with_signals(dynamodb, sample_agent):
 
     # Insert some transaction outcome signals
     for i in range(5):
-        dynamodb.put_item(Item={
-            "PK": f"SIGNAL#sig-{i}",
-            "SK": f"TS#{now}#{i}",
-            "GSI1PK": f"AGENT_SIGNALS#{agent_id}",
-            "GSI1SK": f"TS#{now}#{i}",
-            "signal_type": "transaction_outcome",
-            "agent_id": agent_id,
-            "marketplace_id": "mp-test-1",
-            "outcome": "completed",
-            "timestamp": now,
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"SIGNAL#sig-{i}",
+                "SK": f"TS#{now}#{i}",
+                "GSI1PK": f"AGENT_SIGNALS#{agent_id}",
+                "GSI1SK": f"TS#{now}#{i}",
+                "signal_type": "transaction_outcome",
+                "agent_id": agent_id,
+                "marketplace_id": "mp-test-1",
+                "outcome": "completed",
+                "timestamp": now,
+            }
+        )
 
     return agent_id
 
@@ -65,32 +69,37 @@ def sample_marketplace_for_badge(dynamodb):
     marketplace_id = "mp-badge-test-001"
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "marketplace_id": marketplace_id,
-        "name": "Badge Test Marketplace",
-        "url": "https://badge-test.example.com",
-        "description": "A marketplace for badge tests",
-        "contact_email": "admin@badge-test.example.com",
-        "registered_at": now,
-        "marketplace_score": Decimal("65"),
-        "tier": "certified",
-        "signal_count": 150,
-        "last_scored_at": now,
-        "marketplace_dimensions": json.dumps({
-            "data_quality": 75.0,
-            "reporting_volume": 60.0,
-            "fairness": 70.0,
-            "integration_health": 55.0,
-            "dispute_resolution": 65.0,
-        }),
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "marketplace_id": marketplace_id,
+            "name": "Badge Test Marketplace",
+            "url": "https://badge-test.example.com",
+            "description": "A marketplace for badge tests",
+            "contact_email": "admin@badge-test.example.com",
+            "registered_at": now,
+            "marketplace_score": Decimal("65"),
+            "tier": "certified",
+            "signal_count": 150,
+            "last_scored_at": now,
+            "marketplace_dimensions": json.dumps(
+                {
+                    "data_quality": 75.0,
+                    "reporting_volume": 60.0,
+                    "fairness": 70.0,
+                    "integration_health": 55.0,
+                    "dispute_resolution": 65.0,
+                }
+            ),
+        }
+    )
 
     return marketplace_id
 
 
 # === Badge Lookup Tests ===
+
 
 class TestGetBadge:
     def test_happy_path(self, dynamodb, sample_agent_with_signals):
@@ -128,7 +137,9 @@ class TestGetBadge:
         resp = get_badge(event, {})
         assert resp["statusCode"] == 404
 
-    def test_response_has_no_marketplace_source_data(self, dynamodb, sample_agent_with_signals):
+    def test_response_has_no_marketplace_source_data(
+        self, dynamodb, sample_agent_with_signals
+    ):
         from handlers.badges import get_badge
 
         agent_id = sample_agent_with_signals
@@ -167,6 +178,7 @@ class TestGetBadge:
 
 # === Batch Lookup Tests ===
 
+
 class TestGetBadgesBatch:
     def test_batch_multiple_agents(self, dynamodb, sample_agent_with_signals):
         from handlers.badges import get_badges_batch
@@ -176,17 +188,19 @@ class TestGetBadgesBatch:
         # Create a second agent
         now = datetime.now(timezone.utc).isoformat()
         agent_id_2 = "agent-test-badge-002"
-        dynamodb.put_item(Item={
-            "PK": f"AGENT#{agent_id_2}",
-            "SK": "PROFILE",
-            "agent_id": agent_id_2,
-            "agent_name": "SecondBot",
-            "capabilities": [],
-            "declared_scope": "network_call",
-            "registered_at": now,
-            "trust_score": "45",
-            "trust_tier": "established",
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"AGENT#{agent_id_2}",
+                "SK": "PROFILE",
+                "agent_id": agent_id_2,
+                "agent_name": "SecondBot",
+                "capabilities": [],
+                "declared_scope": "network_call",
+                "registered_at": now,
+                "trust_score": "45",
+                "trust_tier": "established",
+            }
+        )
 
         event = make_api_event(
             method="POST",
@@ -219,7 +233,9 @@ class TestGetBadgesBatch:
         body = json.loads(resp["body"])
         assert body["error"] == "batch_limit_exceeded"
 
-    def test_batch_nonexistent_agents_skipped(self, dynamodb, sample_agent_with_signals):
+    def test_batch_nonexistent_agents_skipped(
+        self, dynamodb, sample_agent_with_signals
+    ):
         from handlers.badges import get_badges_batch
 
         agent_id = sample_agent_with_signals
@@ -250,6 +266,7 @@ class TestGetBadgesBatch:
 
 
 # === SVG Badge Image Tests ===
+
 
 class TestGetBadgeImage:
     def test_compact_svg(self, dynamodb, sample_agent_with_signals):
@@ -329,6 +346,7 @@ class TestGetBadgeImage:
 
 # === SVG Generator Direct Tests ===
 
+
 class TestSvgGeneration:
     def test_all_agent_tiers(self):
         from utils.badge_svg import generate_compact_badge
@@ -380,6 +398,7 @@ class TestSvgGeneration:
 
 
 # === Verification Endpoint Tests ===
+
 
 class TestVerifyBadge:
     def test_verification_with_signature(self, dynamodb, sample_agent_with_signals):
@@ -455,6 +474,7 @@ class TestVerifyBadge:
 
 # === Marketplace Badge Tests ===
 
+
 class TestMarketplaceBadge:
     def test_marketplace_badge_lookup(self, dynamodb, sample_marketplace_for_badge):
         from handlers.badges import get_marketplace_badge
@@ -491,6 +511,7 @@ class TestMarketplaceBadge:
 
 
 # === Rate Limiting Tests ===
+
 
 class TestBadgeRateLimiting:
     def test_badge_rate_limit(self, dynamodb, sample_agent):

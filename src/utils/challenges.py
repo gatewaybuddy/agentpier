@@ -4,18 +4,55 @@ import random
 import secrets
 import uuid
 
-
 # First 25 primes for challenge generation
-_PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
+_PRIMES = [
+    2,
+    3,
+    5,
+    7,
+    11,
+    13,
+    17,
+    19,
+    23,
+    29,
+    31,
+    37,
+    41,
+    43,
+    47,
+    53,
+    59,
+    61,
+    67,
+    71,
+    73,
+    79,
+    83,
+    89,
+    97,
+]
 
 # Words with known vowel counts for challenge generation
 _WORDS = [
-    ("authentication", 7), ("marketplace", 5), ("verification", 5),
-    ("intelligence", 5), ("registration", 4), ("communication", 6),
-    ("infrastructure", 5), ("documentation", 6), ("administrator", 5),
-    ("collaboration", 6), ("extraordinary", 6), ("determination", 5),
-    ("understanding", 4), ("international", 6), ("environmental", 5),
-    ("approximately", 5), ("pronunciation", 6), ("revolutionary", 6),
+    ("authentication", 7),
+    ("marketplace", 5),
+    ("verification", 5),
+    ("intelligence", 5),
+    ("registration", 4),
+    ("communication", 6),
+    ("infrastructure", 5),
+    ("documentation", 6),
+    ("administrator", 5),
+    ("collaboration", 6),
+    ("extraordinary", 6),
+    ("determination", 5),
+    ("understanding", 4),
+    ("international", 6),
+    ("environmental", 5),
+    ("approximately", 5),
+    ("pronunciation", 6),
+    ("revolutionary", 6),
 ]
 
 
@@ -35,10 +72,22 @@ def _type_primes_times_vowels():
 def _type_letter_sum_minus_constant():
     """Sum of letter values (A=1..Z=26) in a short word, combined with arithmetic."""
     words_and_sums = [
-        ("AGENT", 47), ("TRUST", 93), ("PRIME", 61), ("CLOUD", 54),
-        ("NORTH", 73), ("SOUTH", 83), ("PIXEL", 73), ("BYTES", 80),
-        ("QUERY", 81), ("STACK", 55), ("TRADE", 47), ("BLOCK", 47),
-        ("LOGIC", 47), ("NEXUS", 73), ("ORBIT", 66), ("SIGMA", 51),
+        ("AGENT", 47),
+        ("TRUST", 93),
+        ("PRIME", 61),
+        ("CLOUD", 54),
+        ("NORTH", 73),
+        ("SOUTH", 83),
+        ("PIXEL", 73),
+        ("BYTES", 80),
+        ("QUERY", 81),
+        ("STACK", 55),
+        ("TRADE", 47),
+        ("BLOCK", 47),
+        ("LOGIC", 47),
+        ("NEXUS", 73),
+        ("ORBIT", 66),
+        ("SIGMA", 51),
     ]
     word, letter_sum = random.choice(words_and_sums)
     multiplier = random.randint(2, 5)
@@ -59,9 +108,7 @@ def _type_arithmetic_chain():
     d = random.randint(2, 9)
     e = random.randint(10, 50)
     answer = (a * b) + (c * d) - e
-    text = (
-        f"Calculate: ({a} × {b}) + ({c} × {d}) - {e}"
-    )
+    text = f"Calculate: ({a} × {b}) + ({c} × {d}) - {e}"
     return text, answer
 
 
@@ -93,7 +140,7 @@ _GENERATORS = [
 
 def generate_challenge() -> dict:
     """Generate a registration challenge.
-    
+
     Returns:
         {
             "challenge_id": str (UUID),
@@ -103,7 +150,7 @@ def generate_challenge() -> dict:
     """
     generator = secrets.choice(_GENERATORS)
     text, answer = generator()
-    
+
     return {
         "challenge_id": uuid.uuid4().hex[:12],
         "challenge_text": text,

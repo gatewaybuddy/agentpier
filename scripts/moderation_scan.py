@@ -24,7 +24,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from utils.content_filter import check_listing_content, normalize_text
 
-
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 
 
@@ -32,7 +31,9 @@ def get_all_active_listings(table):
     """Scan for all active listings."""
     listings = []
     scan_kwargs = {
-        "FilterExpression": Attr("SK").eq("META") & Attr("status").eq("active") & Attr("PK").begins_with("LISTING#"),
+        "FilterExpression": Attr("SK").eq("META")
+        & Attr("status").eq("active")
+        & Attr("PK").begins_with("LISTING#"),
     }
     while True:
         response = table.scan(**scan_kwargs)
@@ -53,7 +54,9 @@ def scan_listing(listing):
 
     if not is_clean:
         return {
-            "listing_id": listing.get("listing_id", listing["PK"].replace("LISTING#", "")),
+            "listing_id": listing.get(
+                "listing_id", listing["PK"].replace("LISTING#", "")
+            ),
             "title": title,
             "posted_by": listing.get("posted_by", "unknown"),
             "agent_name": listing.get("agent_name", ""),
@@ -67,14 +70,22 @@ def scan_listing(listing):
 
 def check_for_evasion_patterns(listings):
     """Analyze clean listings for potential evasion patterns worth investigating.
-    
+
     Looks for suspicious signals that passed the filter:
     - Heavy unicode usage (potential homoglyph evasion)
     - Excessive spacing/punctuation in words (potential splitting evasion)
     - Known bait keywords in otherwise clean content
     """
     suspicious = []
-    bait_words = ["services", "available", "contact", "telegram", "discord", "dm me", "fast delivery"]
+    bait_words = [
+        "services",
+        "available",
+        "contact",
+        "telegram",
+        "discord",
+        "dm me",
+        "fast delivery",
+    ]
 
     for listing in listings:
         title = listing.get("title", "")
@@ -89,7 +100,8 @@ def check_for_evasion_patterns(listings):
 
         # Check for excessive internal spacing (e.g., "c o c a i n e")
         import re
-        spaced_words = re.findall(r'\b\w(?:\s\w){3,}\b', combined)
+
+        spaced_words = re.findall(r"\b\w(?:\s\w){3,}\b", combined)
         if spaced_words:
             signals.append(f"spaced_out_words: {spaced_words[:3]}")
 
@@ -99,11 +111,15 @@ def check_for_evasion_patterns(listings):
             signals.append(f"bait_keyword_cluster ({bait_count} matches)")
 
         if signals:
-            suspicious.append({
-                "listing_id": listing.get("listing_id", listing["PK"].replace("LISTING#", "")),
-                "title": title[:80],
-                "signals": signals,
-            })
+            suspicious.append(
+                {
+                    "listing_id": listing.get(
+                        "listing_id", listing["PK"].replace("LISTING#", "")
+                    ),
+                    "title": title[:80],
+                    "signals": signals,
+                }
+            )
 
     return suspicious
 
@@ -124,8 +140,12 @@ def remove_listing(table, listing_id):
 
 def main():
     parser = argparse.ArgumentParser(description="AgentPier weekly moderation scan")
-    parser.add_argument("--dry-run", action="store_true", help="Report only, don't remove anything")
-    parser.add_argument("--remove", action="store_true", help="Auto-remove flagged listings")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Report only, don't remove anything"
+    )
+    parser.add_argument(
+        "--remove", action="store_true", help="Auto-remove flagged listings"
+    )
     args = parser.parse_args()
 
     dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
@@ -176,7 +196,9 @@ def main():
                 cats[cat] = cats.get(cat, 0) + 1
         report["filter_recommendations"].append(
             f"Existing filters caught {len(violations)} listings. Top categories: "
-            + ", ".join(f"{c} ({n})" for c, n in sorted(cats.items(), key=lambda x: -x[1]))
+            + ", ".join(
+                f"{c} ({n})" for c, n in sorted(cats.items(), key=lambda x: -x[1])
+            )
         )
 
     if suspicious:
@@ -186,7 +208,9 @@ def main():
         )
 
     if not violations and not suspicious:
-        report["filter_recommendations"].append("All clear. No filter updates needed this cycle.")
+        report["filter_recommendations"].append(
+            "All clear. No filter updates needed this cycle."
+        )
 
     print(json.dumps(report, indent=2, default=str))
     return 1 if violations else 0

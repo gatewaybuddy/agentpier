@@ -21,7 +21,7 @@ def get_client_ip(event):
 
 def check_rate_limit(event, action, max_requests=10, window_seconds=60):
     """Check if client IP has exceeded rate limit.
-    
+
     Returns (allowed: bool, remaining: int, retry_after: int)
     """
     ip = get_client_ip(event)
@@ -34,13 +34,15 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
 
     # Write this request (best-effort — read-only Lambdas may lack PutItem)
     try:
-        table.put_item(Item={
-            "PK": pk,
-            "SK": sk,
-            "ttl": now + window_seconds,  # Auto-cleanup via DynamoDB TTL
-            "action": action,
-            "timestamp": now,
-        })
+        table.put_item(
+            Item={
+                "PK": pk,
+                "SK": sk,
+                "ttl": now + window_seconds,  # Auto-cleanup via DynamoDB TTL
+                "action": action,
+                "timestamp": now,
+            }
+        )
     except Exception:
         # Fail closed: if we can't write to DynamoDB, assume rate limited
         # Conservative fallback - reject request when DB is unreachable
@@ -63,7 +65,7 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
 
     count = response.get("Count", 0)
     remaining = max(0, max_requests - count)
-    
+
     if count > max_requests:
         retry_after = window_seconds - (now - window_start)
         return False, 0, retry_after
@@ -73,7 +75,7 @@ def check_rate_limit(event, action, max_requests=10, window_seconds=60):
 
 def check_auth_failures(event, max_failures=15, window_seconds=300):
     """Check if IP has too many auth failures (5 min window).
-    
+
     Returns True if blocked.
     """
     ip = get_client_ip(event)
@@ -104,12 +106,14 @@ def record_auth_failure(event):
     now = int(time.time())
 
     try:
-        table.put_item(Item={
-            "PK": f"AUTHFAIL#{ip}",
-            "SK": f"FAIL#{now}",
-            "ttl": now + 300,  # 5 min TTL
-            "timestamp": now,
-        })
+        table.put_item(
+            Item={
+                "PK": f"AUTHFAIL#{ip}",
+                "SK": f"FAIL#{now}",
+                "ttl": now + 300,  # 5 min TTL
+                "timestamp": now,
+            }
+        )
     except Exception:
         # Best-effort logging - if DynamoDB is down, we can't record failures
         # but this shouldn't block the calling function

@@ -37,15 +37,22 @@ if _tests_dir not in sys.path:
     sys.path.insert(0, _tests_dir)
 from conftest import make_api_event
 
-
 # === Helpers ===
+
 
 def _now():
     return datetime.now(timezone.utc)
 
 
-def _signal(signal_type, outcome, marketplace_id="mp_alpha", agent_id="agent-1",
-            days_ago=0, metrics=None, transaction_ref=None):
+def _signal(
+    signal_type,
+    outcome,
+    marketplace_id="mp_alpha",
+    agent_id="agent-1",
+    days_ago=0,
+    metrics=None,
+    transaction_ref=None,
+):
     """Create a test signal dict."""
     ts = (_now() - timedelta(days=days_ago)).isoformat()
     s = {
@@ -69,6 +76,7 @@ def _signal(signal_type, outcome, marketplace_id="mp_alpha", agent_id="agent-1",
 
 
 # === Confidence Score Tests ===
+
 
 class TestConfidenceScore:
     def test_low_signal_count(self):
@@ -94,6 +102,7 @@ class TestConfidenceScore:
 
 # === Marketplace Weight Tests ===
 
+
 class TestMarketplaceWeight:
     def test_unscored_marketplace_default(self):
         assert _get_marketplace_weight("unknown", {}) == 1.0
@@ -117,6 +126,7 @@ class TestMarketplaceWeight:
 
 # === Reliability Dimension Tests ===
 
+
 class TestReliabilityDimension:
     def test_no_signals_returns_base(self):
         assert _calculate_reliability([], {}) == CH_BASE_SCORE
@@ -132,18 +142,21 @@ class TestReliabilityDimension:
         assert score < 20
 
     def test_mixed_outcomes(self):
-        signals = (
-            [_signal("transaction_outcome", "completed") for _ in range(7)] +
-            [_signal("transaction_outcome", "failed") for _ in range(3)]
-        )
+        signals = [_signal("transaction_outcome", "completed") for _ in range(7)] + [
+            _signal("transaction_outcome", "failed") for _ in range(3)
+        ]
         score = _calculate_reliability(signals, {})
         assert 20 < score < 80
 
     def test_refund_partial_penalty(self):
         """Refunds should be less severe than failures."""
         base = [_signal("transaction_outcome", "completed") for _ in range(10)]
-        fail_signals = base + [_signal("transaction_outcome", "failed") for _ in range(3)]
-        refund_signals = base + [_signal("transaction_outcome", "refunded") for _ in range(3)]
+        fail_signals = base + [
+            _signal("transaction_outcome", "failed") for _ in range(3)
+        ]
+        refund_signals = base + [
+            _signal("transaction_outcome", "refunded") for _ in range(3)
+        ]
         fail_score = _calculate_reliability(fail_signals, {})
         refund_score = _calculate_reliability(refund_signals, {})
         assert refund_score > fail_score
@@ -155,6 +168,7 @@ class TestReliabilityDimension:
 
 
 # === Safety Dimension Tests ===
+
 
 class TestSafetyDimension:
     def test_no_signals_high_baseline(self):
@@ -211,38 +225,56 @@ class TestSafetyDimension:
 
 # === Capability Dimension Tests ===
 
+
 class TestCapabilityDimension:
     def test_no_signals_returns_base(self):
         assert _calculate_capability([], {}) == CH_BASE_SCORE
 
     def test_high_ratings_high_score(self):
-        signals = [_signal("user_feedback", "completed",
-                           metrics={"user_rating": 5}) for _ in range(10)]
+        signals = [
+            _signal("user_feedback", "completed", metrics={"user_rating": 5})
+            for _ in range(10)
+        ]
         score = _calculate_capability(signals, {})
         assert score >= 90
 
     def test_low_ratings_low_score(self):
-        signals = [_signal("user_feedback", "completed",
-                           metrics={"user_rating": 1}) for _ in range(10)]
+        signals = [
+            _signal("user_feedback", "completed", metrics={"user_rating": 1})
+            for _ in range(10)
+        ]
         score = _calculate_capability(signals, {})
         assert score < 10
 
     def test_mixed_ratings(self):
-        signals = (
-            [_signal("user_feedback", "completed", metrics={"user_rating": 5}) for _ in range(5)] +
-            [_signal("user_feedback", "completed", metrics={"user_rating": 2}) for _ in range(5)]
-        )
+        signals = [
+            _signal("user_feedback", "completed", metrics={"user_rating": 5})
+            for _ in range(5)
+        ] + [
+            _signal("user_feedback", "completed", metrics={"user_rating": 2})
+            for _ in range(5)
+        ]
         score = _calculate_capability(signals, {})
         assert 30 < score < 80
 
     def test_fast_completion_bonus(self):
         """Fast completion times should provide a small bonus."""
-        fast_signals = [_signal("user_feedback", "completed",
-                                metrics={"user_rating": 4, "completion_time_ms": 500})
-                        for _ in range(10)]
-        slow_signals = [_signal("user_feedback", "completed",
-                                metrics={"user_rating": 4, "completion_time_ms": 15000})
-                        for _ in range(10)]
+        fast_signals = [
+            _signal(
+                "user_feedback",
+                "completed",
+                metrics={"user_rating": 4, "completion_time_ms": 500},
+            )
+            for _ in range(10)
+        ]
+        slow_signals = [
+            _signal(
+                "user_feedback",
+                "completed",
+                metrics={"user_rating": 4, "completion_time_ms": 15000},
+            )
+            for _ in range(10)
+        ]
         fast_score = _calculate_capability(fast_signals, {})
         slow_score = _calculate_capability(slow_signals, {})
         assert fast_score > slow_score
@@ -255,26 +287,32 @@ class TestCapabilityDimension:
 
 # === Transparency Dimension Tests ===
 
+
 class TestTransparencyDimension:
     def test_no_signals_returns_base(self):
         assert _calculate_transparency([], {}) == CH_BASE_SCORE
 
     def test_single_marketplace_moderate(self):
-        signals = [_signal("transaction_outcome", "completed", marketplace_id="mp_one")
-                   for _ in range(20)]
+        signals = [
+            _signal("transaction_outcome", "completed", marketplace_id="mp_one")
+            for _ in range(20)
+        ]
         score = _calculate_transparency(signals, {})
         assert 20 < score < 70  # limited by single platform
 
     def test_multiple_marketplaces_higher(self):
         """More marketplaces should increase transparency score."""
-        single_mp = [_signal("transaction_outcome", "completed", marketplace_id="mp_one")
-                     for _ in range(20)]
-        multi_mp = (
-            [_signal("transaction_outcome", "completed", marketplace_id="mp_one")
-             for _ in range(10)] +
-            [_signal("transaction_outcome", "completed", marketplace_id="mp_two")
-             for _ in range(10)]
-        )
+        single_mp = [
+            _signal("transaction_outcome", "completed", marketplace_id="mp_one")
+            for _ in range(20)
+        ]
+        multi_mp = [
+            _signal("transaction_outcome", "completed", marketplace_id="mp_one")
+            for _ in range(10)
+        ] + [
+            _signal("transaction_outcome", "completed", marketplace_id="mp_two")
+            for _ in range(10)
+        ]
         single_score = _calculate_transparency(single_mp, {})
         multi_score = _calculate_transparency(multi_mp, {})
         assert multi_score > single_score
@@ -285,7 +323,9 @@ class TestTransparencyDimension:
         signals = []
         for mp in ["mp_a", "mp_b", "mp_c"]:
             for _ in range(10):
-                signals.append(_signal("transaction_outcome", "completed", marketplace_id=mp))
+                signals.append(
+                    _signal("transaction_outcome", "completed", marketplace_id=mp)
+                )
         score = _calculate_transparency(signals, {})
         assert score > 60
 
@@ -294,10 +334,14 @@ class TestTransparencyDimension:
         signals = []
         # mp_a: 100% completion
         for _ in range(10):
-            signals.append(_signal("transaction_outcome", "completed", marketplace_id="mp_a"))
+            signals.append(
+                _signal("transaction_outcome", "completed", marketplace_id="mp_a")
+            )
         # mp_b: 0% completion (all failures)
         for _ in range(10):
-            signals.append(_signal("transaction_outcome", "failed", marketplace_id="mp_b"))
+            signals.append(
+                _signal("transaction_outcome", "failed", marketplace_id="mp_b")
+            )
 
         score_inconsistent = _calculate_transparency(signals, {})
 
@@ -306,13 +350,15 @@ class TestTransparencyDimension:
         for mp in ["mp_a", "mp_b"]:
             for _ in range(10):
                 consistent_signals.append(
-                    _signal("transaction_outcome", "completed", marketplace_id=mp))
+                    _signal("transaction_outcome", "completed", marketplace_id=mp)
+                )
 
         score_consistent = _calculate_transparency(consistent_signals, {})
         assert score_consistent > score_inconsistent
 
 
 # === Composite Clearinghouse Score Tests ===
+
 
 class TestClearinghouseScore:
     def test_empty_signals_returns_base_score(self):
@@ -343,16 +389,26 @@ class TestClearinghouseScore:
         signals = []
         for mp in ["mp_a", "mp_b", "mp_c", "mp_d"]:
             for _ in range(100):
-                signals.append(_signal("transaction_outcome", "completed", marketplace_id=mp))
-                signals.append(_signal("user_feedback", "completed", marketplace_id=mp,
-                                       metrics={"user_rating": 5, "completion_time_ms": 100}))
+                signals.append(
+                    _signal("transaction_outcome", "completed", marketplace_id=mp)
+                )
+                signals.append(
+                    _signal(
+                        "user_feedback",
+                        "completed",
+                        marketplace_id=mp,
+                        metrics={"user_rating": 5, "completion_time_ms": 100},
+                    )
+                )
         result = calculate_clearinghouse_score("agent-1", signals, {})
         assert result["trust_score"] <= 95
 
     def test_single_marketplace_single_type(self):
         """Single marketplace with one signal type."""
-        signals = [_signal("transaction_outcome", "completed", marketplace_id="mp_one")
-                   for _ in range(20)]
+        signals = [
+            _signal("transaction_outcome", "completed", marketplace_id="mp_one")
+            for _ in range(20)
+        ]
         result = calculate_clearinghouse_score("agent-1", signals, {})
         assert result["trust_score"] > 20
         assert result["marketplace_count"] == 1
@@ -361,12 +417,23 @@ class TestClearinghouseScore:
     def test_multiple_marketplaces_mixed_types(self):
         """Multiple marketplaces with mixed signal types."""
         signals = (
-            [_signal("transaction_outcome", "completed", marketplace_id="mp_a")
-             for _ in range(10)] +
-            [_signal("user_feedback", "completed", marketplace_id="mp_b",
-                     metrics={"user_rating": 4}) for _ in range(10)] +
-            [_signal("transaction_outcome", "completed", marketplace_id="mp_c")
-             for _ in range(10)]
+            [
+                _signal("transaction_outcome", "completed", marketplace_id="mp_a")
+                for _ in range(10)
+            ]
+            + [
+                _signal(
+                    "user_feedback",
+                    "completed",
+                    marketplace_id="mp_b",
+                    metrics={"user_rating": 4},
+                )
+                for _ in range(10)
+            ]
+            + [
+                _signal("transaction_outcome", "completed", marketplace_id="mp_c")
+                for _ in range(10)
+            ]
         )
         result = calculate_clearinghouse_score("agent-1", signals, {})
         assert result["marketplace_count"] == 3
@@ -378,14 +445,20 @@ class TestClearinghouseScore:
         marketplace_scores = {"trusted_mp": 90, "sketchy_mp": 10}
 
         # Identical failures from different marketplaces
-        trusted_failure = [_signal("transaction_outcome", "failed", marketplace_id="trusted_mp")
-                           for _ in range(5)]
-        sketchy_failure = [_signal("transaction_outcome", "failed", marketplace_id="sketchy_mp")
-                           for _ in range(5)]
+        trusted_failure = [
+            _signal("transaction_outcome", "failed", marketplace_id="trusted_mp")
+            for _ in range(5)
+        ]
+        sketchy_failure = [
+            _signal("transaction_outcome", "failed", marketplace_id="sketchy_mp")
+            for _ in range(5)
+        ]
 
         # Good signals from the other
-        base_signals = [_signal("transaction_outcome", "completed", marketplace_id="neutral_mp")
-                        for _ in range(20)]
+        base_signals = [
+            _signal("transaction_outcome", "completed", marketplace_id="neutral_mp")
+            for _ in range(20)
+        ]
 
         score_trusted_fail = calculate_clearinghouse_score(
             "agent-1", base_signals + trusted_failure, marketplace_scores
@@ -404,40 +477,44 @@ class TestClearinghouseScore:
         for mp in ["mp_a", "mp_b"]:
             for _ in range(15):
                 two_mp_signals.append(
-                    _signal("transaction_outcome", "completed", marketplace_id=mp))
+                    _signal("transaction_outcome", "completed", marketplace_id=mp)
+                )
 
         # 3 marketplaces (bonus eligible)
         three_mp_signals = []
         for mp in ["mp_a", "mp_b", "mp_c"]:
             for _ in range(10):
                 three_mp_signals.append(
-                    _signal("transaction_outcome", "completed", marketplace_id=mp))
+                    _signal("transaction_outcome", "completed", marketplace_id=mp)
+                )
 
-        score_two = calculate_clearinghouse_score(
-            "agent-1", two_mp_signals, {}
-        )["trust_score"]
-        score_three = calculate_clearinghouse_score(
-            "agent-1", three_mp_signals, {}
-        )["trust_score"]
+        score_two = calculate_clearinghouse_score("agent-1", two_mp_signals, {})[
+            "trust_score"
+        ]
+        score_three = calculate_clearinghouse_score("agent-1", three_mp_signals, {})[
+            "trust_score"
+        ]
 
         # Three marketplace score should be higher (bonus + transparency)
         assert score_three > score_two
 
     def test_temporal_decay_recent_weighted_higher(self):
         """Recent signals should be weighted more than old signals."""
-        recent_failures = [_signal("transaction_outcome", "failed", days_ago=1)
-                           for _ in range(5)]
-        old_failures = [_signal("transaction_outcome", "failed", days_ago=200)
-                        for _ in range(5)]
+        recent_failures = [
+            _signal("transaction_outcome", "failed", days_ago=1) for _ in range(5)
+        ]
+        old_failures = [
+            _signal("transaction_outcome", "failed", days_ago=200) for _ in range(5)
+        ]
 
         base = [_signal("transaction_outcome", "completed") for _ in range(10)]
 
         score_recent = calculate_clearinghouse_score(
             "agent-1", base + recent_failures, {}
         )["trust_score"]
-        score_old = calculate_clearinghouse_score(
-            "agent-1", base + old_failures, {}
-        )["trust_score"]
+        score_old = calculate_clearinghouse_score("agent-1", base + old_failures, {})[
+            "trust_score"
+        ]
 
         # Old failures should hurt less
         assert score_old > score_recent
@@ -471,12 +548,18 @@ class TestClearinghouseScore:
 
 # === Response Sanitization Tests ===
 
+
 class TestResponseSanitization:
     def test_marketplace_fields_stripped(self):
         score_data = {
             "trust_score": 55.0,
             "trust_tier": "established",
-            "dimensions": {"reliability": 60, "safety": 70, "capability": 50, "transparency": 40},
+            "dimensions": {
+                "reliability": 60,
+                "safety": 70,
+                "capability": 50,
+                "transparency": 40,
+            },
             "marketplace_breakdown": {"mp_a": 60, "mp_b": 50},
             "per_source_scores": {"mp_a": 70},
             "source_weights": {"mp_a": 1.5},
@@ -521,9 +604,11 @@ class TestResponseSanitization:
 
 # === Handler Integration Tests ===
 
+
 class TestClearinghouseScoreEndpoint:
     def test_agent_not_found(self, dynamodb):
         from handlers.trust import trust_clearinghouse_score
+
         event = make_api_event(
             method="GET",
             path="/trust/agents/nonexistent/clearinghouse-score",
@@ -537,14 +622,16 @@ class TestClearinghouseScoreEndpoint:
 
         agent_id = "test-agent-42"
         # Create agent profile
-        dynamodb.put_item(Item={
-            "PK": f"AGENT#{agent_id}",
-            "SK": "PROFILE",
-            "agent_id": agent_id,
-            "agent_name": "Test Agent",
-            "trust_score": "0",
-            "trust_tier": "untrusted",
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"AGENT#{agent_id}",
+                "SK": "PROFILE",
+                "agent_id": agent_id,
+                "agent_name": "Test Agent",
+                "trust_score": "0",
+                "trust_tier": "untrusted",
+            }
+        )
 
         event = make_api_event(
             method="GET",
@@ -561,6 +648,7 @@ class TestClearinghouseScoreEndpoint:
 
     def test_missing_agent_id(self, dynamodb):
         from handlers.trust import trust_clearinghouse_score
+
         event = make_api_event(
             method="GET",
             path="/trust/agents//clearinghouse-score",
@@ -574,13 +662,15 @@ class TestClearinghouseScoreEndpoint:
         from handlers.trust import trust_clearinghouse_score
 
         user_id = "user-agent-42"
-        dynamodb.put_item(Item={
-            "PK": f"USER#{user_id}",
-            "SK": "META",
-            "user_id": user_id,
-            "username": "test_user",
-            "trust_score": Decimal("0.5"),
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"USER#{user_id}",
+                "SK": "META",
+                "user_id": user_id,
+                "username": "test_user",
+                "trust_score": Decimal("0.5"),
+            }
+        )
 
         event = make_api_event(
             method="GET",
@@ -594,6 +684,7 @@ class TestClearinghouseScoreEndpoint:
 class TestRecalculateEndpoint:
     def test_agent_not_found(self, dynamodb):
         from handlers.trust import trust_recalculate
+
         event = make_api_event(
             method="POST",
             path="/trust/agents/nonexistent/recalculate",
@@ -606,30 +697,34 @@ class TestRecalculateEndpoint:
         from handlers.trust import trust_recalculate
 
         agent_id = "recalc-agent"
-        dynamodb.put_item(Item={
-            "PK": f"AGENT#{agent_id}",
-            "SK": "PROFILE",
-            "agent_id": agent_id,
-            "agent_name": "Recalc Agent",
-            "trust_score": "0",
-            "trust_tier": "untrusted",
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"AGENT#{agent_id}",
+                "SK": "PROFILE",
+                "agent_id": agent_id,
+                "agent_name": "Recalc Agent",
+                "trust_score": "0",
+                "trust_tier": "untrusted",
+            }
+        )
 
         # Add some signals
         now = datetime.now(timezone.utc).isoformat()
         for i in range(5):
-            dynamodb.put_item(Item={
-                "PK": f"SIGNAL#mp_test#{agent_id}",
-                "SK": f"TS#{now}#sig{i}",
-                "signal_id": f"sig{i}",
-                "marketplace_id": "mp_test",
-                "agent_id": agent_id,
-                "signal_type": "transaction_outcome",
-                "outcome": "completed",
-                "timestamp": now,
-                "GSI1PK": f"AGENT_SIGNALS#{agent_id}",
-                "GSI1SK": f"TS#{now}#sig{i}",
-            })
+            dynamodb.put_item(
+                Item={
+                    "PK": f"SIGNAL#mp_test#{agent_id}",
+                    "SK": f"TS#{now}#sig{i}",
+                    "signal_id": f"sig{i}",
+                    "marketplace_id": "mp_test",
+                    "agent_id": agent_id,
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "timestamp": now,
+                    "GSI1PK": f"AGENT_SIGNALS#{agent_id}",
+                    "GSI1SK": f"TS#{now}#sig{i}",
+                }
+            )
 
         event = make_api_event(
             method="POST",
@@ -643,15 +738,16 @@ class TestRecalculateEndpoint:
         assert "dimensions" in body
 
         # Verify profile was updated in DynamoDB
-        profile = dynamodb.get_item(
-            Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"}
-        )["Item"]
+        profile = dynamodb.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})[
+            "Item"
+        ]
         assert float(profile["trust_score"]) >= 0
         assert profile.get("last_scored_at") is not None
         assert profile.get("clearinghouse_dimensions") is not None
 
     def test_missing_agent_id(self, dynamodb):
         from handlers.trust import trust_recalculate
+
         event = make_api_event(
             method="POST",
             path="/trust/agents//recalculate",
@@ -665,13 +761,15 @@ class TestRecalculateEndpoint:
         from handlers.trust import trust_recalculate
 
         user_id = "recalc-user"
-        dynamodb.put_item(Item={
-            "PK": f"USER#{user_id}",
-            "SK": "META",
-            "user_id": user_id,
-            "username": "recalc_test",
-            "trust_score": Decimal("0"),
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"USER#{user_id}",
+                "SK": "META",
+                "user_id": user_id,
+                "username": "recalc_test",
+                "trust_score": Decimal("0"),
+            }
+        )
 
         event = make_api_event(
             method="POST",

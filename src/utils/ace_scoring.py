@@ -73,10 +73,13 @@ def get_trust_tier(score: float) -> str:
     return "untrusted"
 
 
-def apply_decay(event_timestamp: str, now: Optional[datetime] = None,
-                is_safety_violation: bool = False) -> float:
+def apply_decay(
+    event_timestamp: str,
+    now: Optional[datetime] = None,
+    is_safety_violation: bool = False,
+) -> float:
     """Calculate decay weight for an event based on age.
-    
+
     Returns a float between 0 and 1 (1 = just happened, decays toward 0).
     """
     if now is None:
@@ -96,10 +99,11 @@ def apply_decay(event_timestamp: str, now: Optional[datetime] = None,
     return math.exp(-lam * days_ago)
 
 
-def calculate_reversibility(agent_profile: dict, events: list,
-                            now: Optional[datetime] = None) -> float:
+def calculate_reversibility(
+    agent_profile: dict, events: list, now: Optional[datetime] = None
+) -> float:
     """Calculate reversibility score (0-100).
-    
+
     Starts at 50. Adjusted by declared capabilities and observed behavior.
     """
     score = 50.0
@@ -134,7 +138,7 @@ def calculate_reversibility(agent_profile: dict, events: list,
 
 def calculate_precedent(events: list, now: Optional[datetime] = None) -> float:
     """Calculate precedent score (0-100).
-    
+
     Starts at 10 (cold start). Grows with successes, decays with failures.
     Asymmetric: failures hurt ~4x more than successes help.
     Safety violations are catastrophic and near-permanent.
@@ -149,8 +153,9 @@ def calculate_precedent(events: list, now: Optional[datetime] = None) -> float:
     for event in events:
         event_type = event.get("event_type", "")
         decay = apply_decay(
-            event.get("timestamp", ""), now,
-            is_safety_violation=(event_type == "safety_violation")
+            event.get("timestamp", ""),
+            now,
+            is_safety_violation=(event_type == "safety_violation"),
         )
 
         if event_type == "success":
@@ -169,10 +174,11 @@ def calculate_precedent(events: list, now: Optional[datetime] = None) -> float:
     return max(0.0, min(PRECEDENT_CAP, score))
 
 
-def calculate_blast_radius(agent_profile: dict, events: list,
-                           now: Optional[datetime] = None) -> float:
+def calculate_blast_radius(
+    agent_profile: dict, events: list, now: Optional[datetime] = None
+) -> float:
     """Calculate blast radius score (0-100, INVERTED: high = safer).
-    
+
     Based on declared scope + observed event scope.
     """
     declared_scope = agent_profile.get("declared_scope", "")
@@ -205,10 +211,10 @@ def calculate_blast_radius(agent_profile: dict, events: list,
 
 def moltbook_weight(transaction_count: int) -> float:
     """Calculate dynamic Moltbook weight based on transaction count.
-    
+
     As AgentPier transaction count grows, Moltbook weight decreases:
     - 0 transactions: 30% Moltbook, 70% ACE
-    - 5 transactions: 20% Moltbook, 80% ACE  
+    - 5 transactions: 20% Moltbook, 80% ACE
     - 10+ transactions: 10% Moltbook, 90% ACE
     - 20+ transactions: 5% Moltbook, 95% ACE
     """
@@ -221,10 +227,13 @@ def moltbook_weight(transaction_count: int) -> float:
     return 0.30
 
 
-def calculate_ace_score(agent_profile: dict, trust_events: list,
-                        now: Optional[datetime] = None,
-                        moltbook_trust: Optional[float] = None,
-                        transaction_count: int = 0) -> dict:
+def calculate_ace_score(
+    agent_profile: dict,
+    trust_events: list,
+    now: Optional[datetime] = None,
+    moltbook_trust: Optional[float] = None,
+    transaction_count: int = 0,
+) -> dict:
     """Calculate composite ACE-T trust score.
 
     If moltbook_trust (0.0-1.0) is provided, it's blended in using dynamic weighting
@@ -237,9 +246,9 @@ def calculate_ace_score(agent_profile: dict, trust_events: list,
     blast_radius = calculate_blast_radius(agent_profile, trust_events, now)
 
     composite = (
-        reversibility * WEIGHT_REVERSIBILITY +
-        precedent * WEIGHT_PRECEDENT +
-        blast_radius * WEIGHT_BLAST_RADIUS
+        reversibility * WEIGHT_REVERSIBILITY
+        + precedent * WEIGHT_PRECEDENT
+        + blast_radius * WEIGHT_BLAST_RADIUS
     )
 
     # Blend Moltbook trust if available using dynamic weighting
@@ -257,7 +266,9 @@ def calculate_ace_score(agent_profile: dict, trust_events: list,
     total_events = len(trust_events)
     successes = sum(1 for e in trust_events if e.get("event_type") == "success")
     failures = sum(1 for e in trust_events if e.get("event_type") == "failure")
-    violations = sum(1 for e in trust_events if e.get("event_type") == "safety_violation")
+    violations = sum(
+        1 for e in trust_events if e.get("event_type") == "safety_violation"
+    )
     timeouts = sum(1 for e in trust_events if e.get("event_type") == "timeout")
 
     return {
@@ -334,14 +345,17 @@ def _calculate_confidence(signal_count: int) -> float:
     return 0.20
 
 
-def _calculate_reliability(signals: list, marketplace_scores: dict,
-                           now: Optional[datetime] = None) -> float:
+def _calculate_reliability(
+    signals: list, marketplace_scores: dict, now: Optional[datetime] = None
+) -> float:
     """Calculate reliability dimension (0-100).
 
     Derived from transaction_outcome signals. Completion rate weighted by
     marketplace score and temporal decay.
     """
-    outcome_signals = [s for s in signals if s.get("signal_type") == "transaction_outcome"]
+    outcome_signals = [
+        s for s in signals if s.get("signal_type") == "transaction_outcome"
+    ]
     if not outcome_signals:
         return CH_BASE_SCORE
 
@@ -379,8 +393,9 @@ def _calculate_reliability(signals: list, marketplace_scores: dict,
     return max(0.0, min(100.0, score))
 
 
-def _calculate_safety(signals: list, marketplace_scores: dict,
-                      now: Optional[datetime] = None) -> float:
+def _calculate_safety(
+    signals: list, marketplace_scores: dict, now: Optional[datetime] = None
+) -> float:
     """Calculate safety dimension (0-100).
 
     Derived from incident signals. Asymmetric — incidents hurt 4x more
@@ -418,8 +433,9 @@ def _calculate_safety(signals: list, marketplace_scores: dict,
     return max(0.0, min(100.0, score))
 
 
-def _calculate_capability(signals: list, marketplace_scores: dict,
-                          now: Optional[datetime] = None) -> float:
+def _calculate_capability(
+    signals: list, marketplace_scores: dict, now: Optional[datetime] = None
+) -> float:
     """Calculate capability dimension (0-100).
 
     Derived from user_feedback ratings and completion_time_ms metrics.
@@ -510,11 +526,16 @@ def _calculate_transparency(signals: list, marketplace_scores: dict) -> float:
         # Calculate completion rate per marketplace for transaction outcomes
         mp_rates = {}
         for mp_id in marketplaces:
-            mp_signals = [s for s in signals
-                          if s.get("marketplace_id") == mp_id
-                          and s.get("signal_type") == "transaction_outcome"]
+            mp_signals = [
+                s
+                for s in signals
+                if s.get("marketplace_id") == mp_id
+                and s.get("signal_type") == "transaction_outcome"
+            ]
             if mp_signals:
-                completions = sum(1 for s in mp_signals if s.get("outcome") == "completed")
+                completions = sum(
+                    1 for s in mp_signals if s.get("outcome") == "completed"
+                )
                 mp_rates[mp_id] = completions / len(mp_signals) * 100.0
 
         if len(mp_rates) >= 2:
@@ -522,15 +543,20 @@ def _calculate_transparency(signals: list, marketplace_scores: dict) -> float:
             stdev = statistics.stdev(rates) if len(rates) > 1 else 0.0
             # Low stdev = consistent = high score
             if stdev <= CH_CROSS_PLATFORM_CONSISTENCY_THRESHOLD:
-                consistency_score = 20.0 * (1.0 - stdev / CH_CROSS_PLATFORM_CONSISTENCY_THRESHOLD)
+                consistency_score = 20.0 * (
+                    1.0 - stdev / CH_CROSS_PLATFORM_CONSISTENCY_THRESHOLD
+                )
 
     score = volume_score + diversity_score + consistency_score
     return max(0.0, min(100.0, score))
 
 
-def calculate_clearinghouse_score(agent_id: str, signals: list,
-                                  marketplace_scores: dict,
-                                  now: Optional[datetime] = None) -> dict:
+def calculate_clearinghouse_score(
+    agent_id: str,
+    signals: list,
+    marketplace_scores: dict,
+    now: Optional[datetime] = None,
+) -> dict:
     """Calculate cross-platform trust score from marketplace-reported signals.
 
     Args:
@@ -554,10 +580,10 @@ def calculate_clearinghouse_score(agent_id: str, signals: list,
 
     # Weighted composite
     composite = (
-        reliability * CH_WEIGHT_RELIABILITY +
-        safety * CH_WEIGHT_SAFETY +
-        capability * CH_WEIGHT_CAPABILITY +
-        transparency * CH_WEIGHT_TRANSPARENCY
+        reliability * CH_WEIGHT_RELIABILITY
+        + safety * CH_WEIGHT_SAFETY
+        + capability * CH_WEIGHT_CAPABILITY
+        + transparency * CH_WEIGHT_TRANSPARENCY
     )
 
     # Cross-platform bonus
@@ -573,11 +599,16 @@ def calculate_clearinghouse_score(agent_id: str, signals: list,
         # Check consistency across platforms for bonus
         mp_rates = {}
         for mp_id in marketplaces:
-            mp_signals = [s for s in signals
-                          if s.get("marketplace_id") == mp_id
-                          and s.get("signal_type") == "transaction_outcome"]
+            mp_signals = [
+                s
+                for s in signals
+                if s.get("marketplace_id") == mp_id
+                and s.get("signal_type") == "transaction_outcome"
+            ]
             if mp_signals:
-                completions = sum(1 for s in mp_signals if s.get("outcome") == "completed")
+                completions = sum(
+                    1 for s in mp_signals if s.get("outcome") == "completed"
+                )
                 mp_rates[mp_id] = completions / len(mp_signals) * 100.0
 
         if len(mp_rates) >= CH_CROSS_PLATFORM_BONUS_THRESHOLD:

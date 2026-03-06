@@ -10,7 +10,12 @@ from boto3.dynamodb.conditions import Key
 
 from utils.response import success, error, unauthorized, too_many_requests, handler
 from utils.marketplace_auth import authenticate_marketplace
-from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
+from utils.rate_limit import (
+    check_rate_limit,
+    check_auth_failures,
+    record_auth_failure,
+    get_client_ip,
+)
 from utils.audit import log_signal_access
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
@@ -19,7 +24,15 @@ TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 SIGNAL_TYPES = {
     "transaction_outcome": {"completed", "failed", "refunded", "disputed"},
     "availability": {"up", "down", "degraded"},
-    "user_feedback": {"completed", "failed", "refunded", "disputed", "up", "down", "degraded"},
+    "user_feedback": {
+        "completed",
+        "failed",
+        "refunded",
+        "disputed",
+        "up",
+        "down",
+        "degraded",
+    },
     "incident": {"security", "safety", "data_breach"},
 }
 
@@ -73,9 +86,15 @@ def _validate_signal(signal, index=None):
         metrics = signal.get("metrics") or {}
         rating = metrics.get("user_rating")
         if rating is None:
-            return f"{prefix}metrics.user_rating is required for user_feedback signals", "missing_user_rating"
+            return (
+                f"{prefix}metrics.user_rating is required for user_feedback signals",
+                "missing_user_rating",
+            )
         if not isinstance(rating, (int, float)) or rating < 1 or rating > 5:
-            return f"{prefix}metrics.user_rating must be between 1 and 5", "invalid_user_rating"
+            return (
+                f"{prefix}metrics.user_rating must be between 1 and 5",
+                "invalid_user_rating",
+            )
 
     return None, None
 
@@ -90,7 +109,9 @@ def _check_idempotency(table, marketplace_id, transaction_ref):
 
     response = table.query(
         IndexName="GSI1",
-        KeyConditionExpression=Key("GSI1PK").eq(f"DEDUP#{marketplace_id}#{transaction_ref}"),
+        KeyConditionExpression=Key("GSI1PK").eq(
+            f"DEDUP#{marketplace_id}#{transaction_ref}"
+        ),
         Limit=1,
     )
     return len(response.get("Items", [])) > 0
@@ -186,12 +207,16 @@ def ingest_signals(event, context):
     """POST /trust/signals — Submit transaction outcome signals."""
     # Check auth failures first
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     marketplace = authenticate_marketplace(event)
     if not marketplace:
         record_auth_failure(event)
-        return unauthorized("Invalid or missing marketplace API key. Provide X-Marketplace-Key header.")
+        return unauthorized(
+            "Invalid or missing marketplace API key. Provide X-Marketplace-Key header."
+        )
 
     marketplace_id = marketplace["marketplace_id"]
 
@@ -200,7 +225,10 @@ def ingest_signals(event, context):
         event, f"signals_{marketplace_id}", max_requests=1000, window_seconds=3600
     )
     if not allowed:
-        return too_many_requests("Signal submission rate limit exceeded (1000/hour). Try again later.", retry_after)
+        return too_many_requests(
+            "Signal submission rate limit exceeded (1000/hour). Try again later.",
+            retry_after,
+        )
 
     try:
         body = json.loads(event.get("body") or "{}")
@@ -213,7 +241,9 @@ def ingest_signals(event, context):
         if not isinstance(signals, list):
             return error("signals must be an array", "invalid_signals")
         if len(signals) > MAX_BATCH_SIZE:
-            return error(f"Batch size exceeds maximum of {MAX_BATCH_SIZE}", "batch_too_large")
+            return error(
+                f"Batch size exceeds maximum of {MAX_BATCH_SIZE}", "batch_too_large"
+            )
         if len(signals) == 0:
             return error("signals array must not be empty", "empty_signals")
     else:
@@ -236,21 +266,27 @@ def ingest_signals(event, context):
         transaction_ref = sig.get("transaction_ref") or ""
 
         # Idempotency check
-        if transaction_ref and _check_idempotency(table, marketplace_id, transaction_ref):
-            results.append({
-                "agent_id": sig["agent_id"],
-                "transaction_ref": transaction_ref,
-                "status": "already_received",
-            })
+        if transaction_ref and _check_idempotency(
+            table, marketplace_id, transaction_ref
+        ):
+            results.append(
+                {
+                    "agent_id": sig["agent_id"],
+                    "transaction_ref": transaction_ref,
+                    "status": "already_received",
+                }
+            )
             continue
 
         signal_id = _store_signal(table, marketplace_id, sig)
         agent_ids.append(sig["agent_id"])
-        results.append({
-            "signal_id": signal_id,
-            "agent_id": sig["agent_id"],
-            "status": "accepted",
-        })
+        results.append(
+            {
+                "signal_id": signal_id,
+                "agent_id": sig["agent_id"],
+                "status": "accepted",
+            }
+        )
 
     # Update counters for accepted signals
     if agent_ids:
@@ -271,23 +307,32 @@ def ingest_signals(event, context):
     accepted_count = sum(1 for r in results if r["status"] == "accepted")
     duplicate_count = sum(1 for r in results if r["status"] == "already_received")
 
-    return _add_firewall_header(success({
-        "accepted": accepted_count,
-        "duplicates": duplicate_count,
-        "signals": results,
-    }, 201 if accepted_count > 0 else 200))
+    return _add_firewall_header(
+        success(
+            {
+                "accepted": accepted_count,
+                "duplicates": duplicate_count,
+                "signals": results,
+            },
+            201 if accepted_count > 0 else 200,
+        )
+    )
 
 
 @handler
 def get_signal_stats(event, context):
     """GET /trust/signals/stats — Signal submission statistics for a marketplace."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     marketplace = authenticate_marketplace(event)
     if not marketplace:
         record_auth_failure(event)
-        return unauthorized("Invalid or missing marketplace API key. Provide X-Marketplace-Key header.")
+        return unauthorized(
+            "Invalid or missing marketplace API key. Provide X-Marketplace-Key header."
+        )
 
     marketplace_id = marketplace["marketplace_id"]
     table = _get_table()
@@ -346,14 +391,18 @@ def get_signal_stats(event, context):
         ip_address=get_client_ip(event),
     )
 
-    return _add_firewall_header(success({
-        "marketplace_id": marketplace_id,
-        "total_signals": total_signals,
-        "by_type": by_type,
-        "by_outcome": by_outcome,
-        "last_signal_at": last_signal_at,
-        "date_range": {
-            "earliest": earliest,
-            "latest": latest,
-        },
-    }))
+    return _add_firewall_header(
+        success(
+            {
+                "marketplace_id": marketplace_id,
+                "total_signals": total_signals,
+                "by_type": by_type,
+                "by_outcome": by_outcome,
+                "last_signal_at": last_signal_at,
+                "date_range": {
+                    "earliest": earliest,
+                    "latest": latest,
+                },
+            }
+        )
+    )

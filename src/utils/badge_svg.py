@@ -53,7 +53,7 @@ def generate_compact_badge(tier: str, score: int) -> str:
     value_width = _text_width(value_text)
     total_width = label_width + value_width
 
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{label_text}: {value_text}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{label_text}: {value_text}">
   <title>{label_text}: {value_text}</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
@@ -73,17 +73,17 @@ def generate_compact_badge(tier: str, score: int) -> str:
     <text aria-hidden="true" x="{label_width + value_width / 2}" y="15" fill="#010101" fill-opacity=".3">{value_text}</text>
     <text x="{label_width + value_width / 2}" y="14">{value_text}</text>
   </g>
-</svg>'''
+</svg>"""
 
 
 def _dimension_bar(label: str, value: float, y: int, width: int = 140) -> str:
     """Generate an SVG bar for a dimension score."""
     bar_width = int((value / 100.0) * width)
     bar_color = "#4caf50" if value >= 70 else "#ffc107" if value >= 40 else "#f44336"
-    return f'''  <text x="10" y="{y}" fill="#fff" font-size="10" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">{label}</text>
+    return f"""  <text x="10" y="{y}" fill="#fff" font-size="10" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">{label}</text>
   <rect x="90" y="{y - 9}" width="{width}" height="10" rx="2" fill="#444"/>
   <rect x="90" y="{y - 9}" width="{bar_width}" height="10" rx="2" fill="{bar_color}"/>
-  <text x="{90 + width + 5}" y="{y}" fill="#fff" font-size="10" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">{int(value)}</text>'''
+  <text x="{90 + width + 5}" y="{y}" fill="#fff" font-size="10" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">{int(value)}</text>"""
 
 
 def generate_detailed_badge(tier: str, score: int, dimensions: dict) -> str:
@@ -105,14 +105,16 @@ def generate_detailed_badge(tier: str, score: int, dimensions: dict) -> str:
     capability = dimensions.get("capability", 0)
     transparency = dimensions.get("transparency", 0)
 
-    bars = "\n".join([
-        _dimension_bar("Reliability", reliability, 42, 120),
-        _dimension_bar("Safety", safety, 56, 120),
-        _dimension_bar("Capability", capability, 70, 120),
-        _dimension_bar("Transparency", transparency, 84, 120),
-    ])
+    bars = "\n".join(
+        [
+            _dimension_bar("Reliability", reliability, 42, 120),
+            _dimension_bar("Safety", safety, 56, 120),
+            _dimension_bar("Capability", capability, 70, 120),
+            _dimension_bar("Transparency", transparency, 84, 120),
+        ]
+    )
 
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" role="img" aria-label="AgentPier Trust Badge: {tier_label} {score}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" role="img" aria-label="AgentPier Trust Badge: {tier_label} {score}">
   <title>AgentPier Trust Badge: {tier_label} {score}</title>
   <rect width="{width}" height="{height}" rx="4" fill="#333"/>
   <rect width="{width}" height="24" rx="4" fill="{tier_color}"/>
@@ -120,7 +122,7 @@ def generate_detailed_badge(tier: str, score: int, dimensions: dict) -> str:
   <text x="10" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">AgentPier</text>
   <text x="{width - 10}" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-anchor="end">{tier_label} {score}</text>
 {bars}
-</svg>'''
+</svg>"""
 
 
 def generate_marketplace_badge(tier: str, score: int, style: str = "compact") -> str:
@@ -141,7 +143,7 @@ def generate_marketplace_badge(tier: str, score: int, style: str = "compact") ->
         value_width = _text_width(value_text)
         total_width = label_width + value_width
 
-        return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{label_text}: {value_text}">
+        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{label_text}: {value_text}">
   <title>{label_text}: {value_text}</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
@@ -161,7 +163,7 @@ def generate_marketplace_badge(tier: str, score: int, style: str = "compact") ->
     <text aria-hidden="true" x="{label_width + value_width / 2}" y="15" fill="#010101" fill-opacity=".3">{value_text}</text>
     <text x="{label_width + value_width / 2}" y="14">{value_text}</text>
   </g>
-</svg>'''
+</svg>"""
     else:
         # Detailed marketplace badge (no dimension bars — marketplaces show score + tier only)
         tier_color = TIER_COLORS.get(tier, "#9e9e9e")
@@ -169,7 +171,7 @@ def generate_marketplace_badge(tier: str, score: int, style: str = "compact") ->
         width = 260
         height = 50
 
-        return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" role="img" aria-label="AgentPier Verified Marketplace: {tier_label} {score}">
+        return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" role="img" aria-label="AgentPier Verified Marketplace: {tier_label} {score}">
   <title>AgentPier Verified Marketplace: {tier_label} {score}</title>
   <rect width="{width}" height="{height}" rx="4" fill="#333"/>
   <rect width="{width}" height="24" rx="4" fill="{tier_color}"/>
@@ -177,4 +179,4 @@ def generate_marketplace_badge(tier: str, score: int, style: str = "compact") ->
   <text x="10" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Verdana,Geneva,DejaVu Sans,sans-serif">AgentPier</text>
   <text x="{width - 10}" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-anchor="end">{tier_label} {score}</text>
   <text x="{width / 2}" y="40" fill="#ccc" font-size="11" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-anchor="middle">Verified Marketplace</text>
-</svg>'''
+</svg>"""

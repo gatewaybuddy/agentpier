@@ -77,6 +77,7 @@ def fetch_trust_metrics(agent_name):
     Returns the profile dict.
     """
     from urllib.parse import quote
+
     return _moltbook_request(f"/agents/profile?name={quote(agent_name)}")
 
 

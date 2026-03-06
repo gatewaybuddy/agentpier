@@ -18,7 +18,7 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License", 
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
@@ -37,7 +37,7 @@ setup(
     extras_require={
         "dev": [
             "pytest>=6.0",
-            "black>=21.0", 
+            "black>=21.0",
             "isort>=5.0",
             "mypy>=0.900",
         ],
@@ -46,7 +46,7 @@ setup(
         ],
         "openai": [
             "openai>=1.0.0",
-        ]
+        ],
     },
     keywords="ai agents trust scoring langchain agentpier reputation callbacks",
     project_urls={

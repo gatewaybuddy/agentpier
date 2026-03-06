@@ -17,34 +17,38 @@ def sample_marketplace(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "GSI1PK": "MARKETPLACE_NAME#Test Marketplace",
-        "GSI1SK": "META",
-        "marketplace_id": marketplace_id,
-        "name": "Test Marketplace",
-        "url": "https://test-marketplace.example.com",
-        "description": "A test marketplace",
-        "contact_email": "admin@test-marketplace.example.com",
-        "api_key_hash": key_hash,
-        "registered_at": now,
-        "verified_at": None,
-        "marketplace_score": Decimal("0"),
-        "tier": "registered",
-        "signal_count": 0,
-        "last_signal_at": None,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "GSI1PK": "MARKETPLACE_NAME#Test Marketplace",
+            "GSI1SK": "META",
+            "marketplace_id": marketplace_id,
+            "name": "Test Marketplace",
+            "url": "https://test-marketplace.example.com",
+            "description": "A test marketplace",
+            "contact_email": "admin@test-marketplace.example.com",
+            "api_key_hash": key_hash,
+            "registered_at": now,
+            "verified_at": None,
+            "marketplace_score": Decimal("0"),
+            "tier": "registered",
+            "signal_count": 0,
+            "last_signal_at": None,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "marketplace_id": marketplace_id,
-        "key_hash": key_hash,
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "marketplace_id": marketplace_id,
+            "key_hash": key_hash,
+            "created_at": now,
+        }
+    )
 
     return marketplace_id, raw_key
 
@@ -166,7 +170,9 @@ class TestRegisterMarketplace:
         from handlers.marketplace import register_marketplace
 
         # Simulate rate limit exceeded
-        with patch("handlers.marketplace.check_rate_limit", return_value=(False, 0, 3600)):
+        with patch(
+            "handlers.marketplace.check_rate_limit", return_value=(False, 0, 3600)
+        ):
             event = make_api_event(
                 method="POST",
                 path="/marketplace/register",

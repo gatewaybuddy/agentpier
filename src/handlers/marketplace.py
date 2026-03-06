@@ -10,9 +10,21 @@ from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
 
-from utils.response import success, error, unauthorized, not_found, too_many_requests, handler
+from utils.response import (
+    success,
+    error,
+    unauthorized,
+    not_found,
+    too_many_requests,
+    handler,
+)
 from utils.auth import generate_api_key, hash_key
-from utils.rate_limit import check_rate_limit, check_auth_failures, record_auth_failure, get_client_ip
+from utils.rate_limit import (
+    check_rate_limit,
+    check_auth_failures,
+    record_auth_failure,
+    get_client_ip,
+)
 from utils.marketplace_scoring import calculate_marketplace_score
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
@@ -79,7 +91,10 @@ def register_marketplace(event, context):
         event, "mp_register", max_requests=5, window_seconds=3600
     )
     if not allowed:
-        return too_many_requests("Marketplace registration rate limit exceeded. Try again later.", retry_after)
+        return too_many_requests(
+            "Marketplace registration rate limit exceeded. Try again later.",
+            retry_after,
+        )
 
     try:
         body = json.loads(event.get("body") or "{}")
@@ -99,10 +114,15 @@ def register_marketplace(event, context):
         )
 
     if not url or not URL_RE.match(url):
-        return error("url is required and must be a valid HTTP/HTTPS URL", "invalid_url")
+        return error(
+            "url is required and must be a valid HTTP/HTTPS URL", "invalid_url"
+        )
 
     if not contact_email or not EMAIL_RE.match(contact_email):
-        return error("contact_email is required and must be a valid email address", "invalid_email")
+        return error(
+            "contact_email is required and must be a valid email address",
+            "invalid_email",
+        )
 
     table = _get_table()
 
@@ -154,12 +174,15 @@ def register_marketplace(event, context):
     table.put_item(Item=marketplace_item)
     table.put_item(Item=key_item)
 
-    return success({
-        "marketplace_id": marketplace_id,
-        "name": name,
-        "api_key": raw_key,
-        "message": "Marketplace registered. Store your API key securely — it cannot be retrieved again.",
-    }, 201)
+    return success(
+        {
+            "marketplace_id": marketplace_id,
+            "name": name,
+            "api_key": raw_key,
+            "message": "Marketplace registered. Store your API key securely — it cannot be retrieved again.",
+        },
+        201,
+    )
 
 
 @handler
@@ -180,23 +203,27 @@ def get_marketplace(event, context):
         return not_found("Marketplace not found")
 
     # Return only public fields
-    return success({
-        "marketplace_id": item.get("marketplace_id"),
-        "name": item.get("name"),
-        "url": item.get("url"),
-        "description": item.get("description"),
-        "tier": item.get("tier"),
-        "marketplace_score": float(item.get("marketplace_score", 0)),
-        "registered_at": item.get("registered_at"),
-        "signal_count": int(item.get("signal_count", 0)),
-    })
+    return success(
+        {
+            "marketplace_id": item.get("marketplace_id"),
+            "name": item.get("name"),
+            "url": item.get("url"),
+            "description": item.get("description"),
+            "tier": item.get("tier"),
+            "marketplace_score": float(item.get("marketplace_score", 0)),
+            "registered_at": item.get("registered_at"),
+            "signal_count": int(item.get("signal_count", 0)),
+        }
+    )
 
 
 @handler
 def update_marketplace(event, context):
     """PUT /marketplace/{id} — Update marketplace profile (requires API key)."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     marketplace = _authenticate_marketplace(event)
     if not marketplace:
@@ -241,7 +268,10 @@ def update_marketplace(event, context):
         expr_values[":url"] = new_url
 
     if not update_parts:
-        return error("No valid fields to update. Allowed: description, contact_email, url", "no_updates")
+        return error(
+            "No valid fields to update. Allowed: description, contact_email, url",
+            "no_updates",
+        )
 
     now = datetime.now(timezone.utc).isoformat()
     update_parts.append("updated_at = :now")
@@ -260,20 +290,24 @@ def update_marketplace(event, context):
     result = table.update_item(**update_kwargs)
     updated = result.get("Attributes", {})
 
-    return success({
-        "marketplace_id": updated.get("marketplace_id"),
-        "name": updated.get("name"),
-        "url": updated.get("url"),
-        "description": updated.get("description"),
-        "updated_at": updated.get("updated_at"),
-    })
+    return success(
+        {
+            "marketplace_id": updated.get("marketplace_id"),
+            "name": updated.get("name"),
+            "url": updated.get("url"),
+            "description": updated.get("description"),
+            "updated_at": updated.get("updated_at"),
+        }
+    )
 
 
 @handler
 def rotate_marketplace_key(event, context):
     """POST /marketplace/{id}/rotate-key — Rotate API key."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     marketplace = _authenticate_marketplace(event)
     if not marketplace:
@@ -320,11 +354,13 @@ def rotate_marketplace_key(event, context):
         ExpressionAttributeValues={":h": key_hash_val, ":now": now},
     )
 
-    return success({
-        "marketplace_id": marketplace_id,
-        "api_key": raw_key,
-        "message": "Key rotated. Your previous key is now invalid. Store this new key securely.",
-    })
+    return success(
+        {
+            "marketplace_id": marketplace_id,
+            "api_key": raw_key,
+            "message": "Key rotated. Your previous key is now invalid. Store this new key securely.",
+        }
+    )
 
 
 def _fetch_marketplace_signals(table, marketplace_id):
@@ -387,22 +423,30 @@ def get_marketplace_score(event, context):
         return not_found("Marketplace not found")
 
     # Return sanitized public score data
-    return success({
-        "marketplace_id": marketplace_id,
-        "name": item.get("name"),
-        "marketplace_score": float(item.get("marketplace_score", 0)),
-        "tier": item.get("tier", "registered"),
-        "signal_count": int(item.get("signal_count", 0)),
-        "dimensions": json.loads(item["marketplace_dimensions"]) if item.get("marketplace_dimensions") else None,
-        "last_scored_at": item.get("last_scored_at"),
-    })
+    return success(
+        {
+            "marketplace_id": marketplace_id,
+            "name": item.get("name"),
+            "marketplace_score": float(item.get("marketplace_score", 0)),
+            "tier": item.get("tier", "registered"),
+            "signal_count": int(item.get("signal_count", 0)),
+            "dimensions": (
+                json.loads(item["marketplace_dimensions"])
+                if item.get("marketplace_dimensions")
+                else None
+            ),
+            "last_scored_at": item.get("last_scored_at"),
+        }
+    )
 
 
 @handler
 def recalculate_marketplace_score(event, context):
     """POST /marketplace/{id}/recalculate-score — Recalculate marketplace score from signals."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     marketplace = _authenticate_marketplace(event)
     if not marketplace:
@@ -444,11 +488,13 @@ def recalculate_marketplace_score(event, context):
         },
     )
 
-    return success({
-        "marketplace_id": marketplace_id,
-        "marketplace_score": result["marketplace_score"],
-        "marketplace_tier": result["marketplace_tier"],
-        "dimensions": result["dimensions"],
-        "signal_count": result["signal_count"],
-        "last_updated": result["last_updated"],
-    })
+    return success(
+        {
+            "marketplace_id": marketplace_id,
+            "marketplace_score": result["marketplace_score"],
+            "marketplace_tier": result["marketplace_tier"],
+            "dimensions": result["dimensions"],
+            "signal_count": result["signal_count"],
+            "last_updated": result["last_updated"],
+        }
+    )

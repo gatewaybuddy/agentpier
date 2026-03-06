@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 """Listing CRUD handlers for AgentPier."""
 
 import json
@@ -11,7 +12,11 @@ from boto3.dynamodb.conditions import Key
 
 from utils.response import success, error, not_found, unauthorized
 from utils.auth import authenticate
-from utils.content_filter import check_listing_content, log_content_violation, get_user_violation_count
+from utils.content_filter import (
+    check_listing_content,
+    log_content_violation,
+    get_user_violation_count,
+)
 from utils.rate_limit import get_client_ip
 from utils.pagination import sign_cursor, verify_cursor
 
@@ -21,9 +26,21 @@ FREE_LISTING_LIMIT = 3  # Free listings per account
 
 VALID_TYPES = {"service", "product", "agent_skill", "consulting"}
 VALID_CATEGORIES = {
-    "code_review", "research", "automation", "monitoring", "content_creation",
-    "security", "infrastructure", "data_processing", "translation", "trading",
-    "consulting", "design", "testing", "devops", "other",
+    "code_review",
+    "research",
+    "automation",
+    "monitoring",
+    "content_creation",
+    "security",
+    "infrastructure",
+    "data_processing",
+    "translation",
+    "trading",
+    "consulting",
+    "design",
+    "testing",
+    "devops",
+    "other",
 }
 
 
@@ -53,7 +70,9 @@ def create_listing(event, context):
 
     category = body.get("category", "").lower()
     if category not in VALID_CATEGORIES:
-        return error(f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category")
+        return error(
+            f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category"
+        )
 
     title = body.get("title", "")
     if not isinstance(title, str):
@@ -73,7 +92,7 @@ def create_listing(event, context):
     listing_id = f"lst_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
     user_id = user["PK"].replace("USER#", "")
-    
+
     # Validate tags
     tags = body.get("tags", [])
     if not isinstance(tags, list):
@@ -93,22 +112,23 @@ def create_listing(event, context):
     if not is_clean:
         client_ip = get_client_ip(event)
         log_content_violation(user_id, body, flagged_categories, client_ip)
-        
+
         # Check for repeat offenders (3+ violations in 24h = suspended)
         violation_count = get_user_violation_count(user_id)
         if violation_count >= 3:
             return error(
                 "Your account has been suspended due to repeated content policy violations. "
                 "Contact support if you believe this is an error.",
-                "account_suspended", 403
+                "account_suspended",
+                403,
             )
-        
+
         return error(
             "This listing violates AgentPier content policy. "
             "Please revise your title, description, or tags and resubmit. "
             "AgentPier is a business-focused marketplace — illegal, explicit, "
             "exploitative, or fraudulent content is not permitted.",
-            "content_policy_violation"
+            "content_policy_violation",
         )
 
     # --- Listing limit check (3 free per account) ---
@@ -119,12 +139,13 @@ def create_listing(event, context):
         Select="COUNT",
     )
     current_count = existing_listings.get("Count", 0)
-    
+
     if current_count >= FREE_LISTING_LIMIT:
         return error(
             f"Free listing limit reached ({FREE_LISTING_LIMIT}). "
             "Upgrade your account to create additional listings.",
-            "listing_limit_reached", 402
+            "listing_limit_reached",
+            402,
         )
 
     location = body.get("location", {})
@@ -155,7 +176,9 @@ def create_listing(event, context):
         "agent_name": user.get("username") or user.get("agent_name", ""),
         "human_verified": user.get("human_verified", False),
         "moltbook_verified": bool(user.get("moltbook_verified", False)),
-        "moltbook_name": user.get("moltbook_name", "") if user.get("moltbook_verified") else "",
+        "moltbook_name": (
+            user.get("moltbook_name", "") if user.get("moltbook_verified") else ""
+        ),
         "trust_score": Decimal("0.0"),
         "status": "active",
         "created_at": now,
@@ -168,29 +191,30 @@ def create_listing(event, context):
     table.update_item(
         Key={"PK": f"USER#{user_id}", "SK": "META"},
         UpdateExpression="ADD listing_count :inc",
-        ExpressionAttributeValues={":inc": 1}
+        ExpressionAttributeValues={":inc": 1},
     )
 
-    return success({
-        "id": listing_id,
-        "status": "active",
-        "trust_score": 0.0,
-        "created_at": now,
-        "url": f"https://agentpier.io/listing/{listing_id}",
-    }, 201)
+    return success(
+        {
+            "id": listing_id,
+            "status": "active",
+            "trust_score": 0.0,
+            "created_at": now,
+            "url": f"https://agentpier.io/listing/{listing_id}",
+        },
+        201,
+    )
 
 
 def get_listing(event, context):
     """GET /listings/{id} — Get a specific listing."""
     listing_id = event.get("pathParameters", {}).get("id", "")
-    
+
     if not listing_id:
         return error("Listing ID required", "missing_id")
 
     table = _get_table()
-    response = table.get_item(
-        Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
-    )
+    response = table.get_item(Key={"PK": f"LISTING#{listing_id}", "SK": "META"})
 
     item = response.get("Item")
     if not item:
@@ -199,7 +223,7 @@ def get_listing(event, context):
     # Strip internal fields from response
     for key in ["PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "posted_by"]:
         item.pop(key, None)
-    
+
     # Convert Decimal trust_score to float
     if "trust_score" in item:
         item["trust_score"] = float(item["trust_score"])
@@ -216,7 +240,9 @@ def search_listings(event, context):
         return error("category parameter is required", "missing_category")
 
     if category not in VALID_CATEGORIES:
-        return error(f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category")
+        return error(
+            f"Invalid category. Must be one of: {VALID_CATEGORIES}", "invalid_category"
+        )
 
     state = params.get("state", "").upper()
     city = params.get("city", "").lower().replace(" ", "_")
@@ -250,11 +276,11 @@ def search_listings(event, context):
         decoded = verify_cursor(cursor)
         if not decoded:
             return error("Invalid pagination cursor", "invalid_cursor")
-        
+
         # Additional validation - cursor must belong to the queried category
         if decoded.get("GSI1PK") != category:
             return error("Invalid pagination cursor", "invalid_cursor")
-        
+
         query_kwargs["ExclusiveStartKey"] = decoded
 
     response = table.query(**query_kwargs)
@@ -298,9 +324,9 @@ def update_listing(event, context):
     table = _get_table()
 
     # Verify ownership
-    existing = table.get_item(
-        Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
-    ).get("Item")
+    existing = table.get_item(Key={"PK": f"LISTING#{listing_id}", "SK": "META"}).get(
+        "Item"
+    )
 
     if not existing:
         return not_found(f"Listing {listing_id} not found")
@@ -315,7 +341,15 @@ def update_listing(event, context):
         return error("Invalid JSON body", "invalid_body")
 
     # Allowed update fields
-    allowed = {"title", "description", "pricing", "availability", "contact", "tags", "status"}
+    allowed = {
+        "title",
+        "description",
+        "pricing",
+        "availability",
+        "contact",
+        "tags",
+        "status",
+    }
     updates = {k: v for k, v in body.items() if k in allowed}
 
     # Type validation on text fields
@@ -330,11 +364,13 @@ def update_listing(event, context):
     is_clean, flagged = check_listing_content(check_title, check_desc, check_tags)
     if not is_clean:
         client_ip = get_client_ip(event)
-        log_content_violation(user_id, {**updates, "listing_id": listing_id}, flagged, client_ip)
+        log_content_violation(
+            user_id, {**updates, "listing_id": listing_id}, flagged, client_ip
+        )
         return error(
             "This update violates AgentPier content policy. "
             "Please revise your content and resubmit.",
-            "content_policy_violation"
+            "content_policy_violation",
         )
 
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -373,9 +409,9 @@ def delete_listing(event, context):
     table = _get_table()
 
     # Verify ownership
-    existing = table.get_item(
-        Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
-    ).get("Item")
+    existing = table.get_item(Key={"PK": f"LISTING#{listing_id}", "SK": "META"}).get(
+        "Item"
+    )
 
     if not existing:
         return not_found(f"Listing {listing_id} not found")
@@ -384,15 +420,13 @@ def delete_listing(event, context):
     if existing.get("posted_by") != user_id:
         return error("You can only delete your own listings", "forbidden", 403)
 
-    table.delete_item(
-        Key={"PK": f"LISTING#{listing_id}", "SK": "META"}
-    )
+    table.delete_item(Key={"PK": f"LISTING#{listing_id}", "SK": "META"})
 
     # Update user's listing_count
     table.update_item(
         Key={"PK": f"USER#{user_id}", "SK": "META"},
         UpdateExpression="ADD listing_count :dec",
-        ExpressionAttributeValues={":dec": -1}
+        ExpressionAttributeValues={":dec": -1},
     )
 
     return success({"id": listing_id, "deleted": True})

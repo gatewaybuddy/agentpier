@@ -21,34 +21,38 @@ def marketplace_a(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "GSI1PK": "MARKETPLACE_NAME#Firewall Test A",
-        "GSI1SK": "META",
-        "marketplace_id": marketplace_id,
-        "name": "Firewall Test A",
-        "url": "https://firewall-a.example.com",
-        "description": "Marketplace A for firewall tests",
-        "contact_email": "admin@firewall-a.example.com",
-        "api_key_hash": key_hash,
-        "registered_at": now,
-        "verified_at": None,
-        "marketplace_score": Decimal("0"),
-        "tier": "registered",
-        "signal_count": 0,
-        "last_signal_at": None,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "GSI1PK": "MARKETPLACE_NAME#Firewall Test A",
+            "GSI1SK": "META",
+            "marketplace_id": marketplace_id,
+            "name": "Firewall Test A",
+            "url": "https://firewall-a.example.com",
+            "description": "Marketplace A for firewall tests",
+            "contact_email": "admin@firewall-a.example.com",
+            "api_key_hash": key_hash,
+            "registered_at": now,
+            "verified_at": None,
+            "marketplace_score": Decimal("0"),
+            "tier": "registered",
+            "signal_count": 0,
+            "last_signal_at": None,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "marketplace_id": marketplace_id,
-        "key_hash": key_hash,
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "marketplace_id": marketplace_id,
+            "key_hash": key_hash,
+            "created_at": now,
+        }
+    )
 
     return marketplace_id, raw_key
 
@@ -62,34 +66,38 @@ def marketplace_b(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "GSI1PK": "MARKETPLACE_NAME#Firewall Test B",
-        "GSI1SK": "META",
-        "marketplace_id": marketplace_id,
-        "name": "Firewall Test B",
-        "url": "https://firewall-b.example.com",
-        "description": "Marketplace B for firewall tests",
-        "contact_email": "admin@firewall-b.example.com",
-        "api_key_hash": key_hash,
-        "registered_at": now,
-        "verified_at": None,
-        "marketplace_score": Decimal("0"),
-        "tier": "registered",
-        "signal_count": 0,
-        "last_signal_at": None,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "GSI1PK": "MARKETPLACE_NAME#Firewall Test B",
+            "GSI1SK": "META",
+            "marketplace_id": marketplace_id,
+            "name": "Firewall Test B",
+            "url": "https://firewall-b.example.com",
+            "description": "Marketplace B for firewall tests",
+            "contact_email": "admin@firewall-b.example.com",
+            "api_key_hash": key_hash,
+            "registered_at": now,
+            "verified_at": None,
+            "marketplace_score": Decimal("0"),
+            "tier": "registered",
+            "signal_count": 0,
+            "last_signal_at": None,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "marketplace_id": marketplace_id,
-        "key_hash": key_hash,
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "marketplace_id": marketplace_id,
+            "key_hash": key_hash,
+            "created_at": now,
+        }
+    )
 
     return marketplace_id, raw_key
 
@@ -111,8 +119,13 @@ def _stats_event(api_key):
     )
 
 
-def _ingest_signal(api_key, agent_id, signal_type="transaction_outcome",
-                   outcome="completed", transaction_ref=None):
+def _ingest_signal(
+    api_key,
+    agent_id,
+    signal_type="transaction_outcome",
+    outcome="completed",
+    transaction_ref=None,
+):
     """Helper to ingest a single signal."""
     from handlers.signals import ingest_signals
 
@@ -130,7 +143,9 @@ def _ingest_signal(api_key, agent_id, signal_type="transaction_outcome",
 class TestMarketplaceIsolation:
     """Marketplace A cannot see Marketplace B's raw signals via any endpoint."""
 
-    def test_marketplace_a_cannot_see_b_signals(self, dynamodb, marketplace_a, marketplace_b):
+    def test_marketplace_a_cannot_see_b_signals(
+        self, dynamodb, marketplace_a, marketplace_b
+    ):
         """Marketplace A's stats should not include B's signals."""
         from handlers.signals import get_signal_stats
 
@@ -158,7 +173,9 @@ class TestMarketplaceIsolation:
         assert body_b["marketplace_id"] == mp_b_id
         assert body_b["total_signals"] == 3
 
-    def test_signal_pk_contains_marketplace_id(self, dynamodb, marketplace_a, marketplace_b):
+    def test_signal_pk_contains_marketplace_id(
+        self, dynamodb, marketplace_a, marketplace_b
+    ):
         """Signals are stored with marketplace-partitioned PK."""
         import boto3
         from boto3.dynamodb.conditions import Key
@@ -169,7 +186,9 @@ class TestMarketplaceIsolation:
         _ingest_signal(mp_a_key, "agent-pk-test", transaction_ref="tx-pk-a")
         _ingest_signal(mp_b_key, "agent-pk-test", transaction_ref="tx-pk-b")
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
 
         # Query A's partition — should only find A's signal
         a_result = table.query(
@@ -187,7 +206,9 @@ class TestMarketplaceIsolation:
         assert len(b_signals) == 1
         assert b_signals[0]["marketplace_id"] == mp_b_id
 
-    def test_stats_only_returns_own_marketplace_data(self, dynamodb, marketplace_a, marketplace_b):
+    def test_stats_only_returns_own_marketplace_data(
+        self, dynamodb, marketplace_a, marketplace_b
+    ):
         """Stats endpoint only returns data for the authenticated marketplace."""
         from handlers.signals import get_signal_stats
 
@@ -216,13 +237,16 @@ class TestAuditLogging:
         mp_id, mp_key = marketplace_a
         _ingest_signal(mp_key, "agent-audit-1", transaction_ref="tx-audit-1")
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         result = table.query(
             KeyConditionExpression=Key("PK").eq("AUDIT#SIGNAL_ACCESS"),
         )
 
         audit_entries = [
-            i for i in result["Items"]
+            i
+            for i in result["Items"]
             if i.get("action") == "ingest" and i.get("agent_id") == "agent-audit-1"
         ]
         assert len(audit_entries) >= 1
@@ -242,13 +266,16 @@ class TestAuditLogging:
         mp_id, mp_key = marketplace_a
         get_signal_stats(_stats_event(mp_key), {})
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         result = table.query(
             KeyConditionExpression=Key("PK").eq("AUDIT#SIGNAL_ACCESS"),
         )
 
         audit_entries = [
-            i for i in result["Items"]
+            i
+            for i in result["Items"]
             if i.get("action") == "stats_query" and i.get("accessor_id") == mp_id
         ]
         assert len(audit_entries) >= 1
@@ -264,7 +291,9 @@ class TestAuditLogging:
         _ingest_signal(mp_key, "agent-append-1", transaction_ref="tx-append-1")
         _ingest_signal(mp_key, "agent-append-2", transaction_ref="tx-append-2")
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         result = table.query(
             KeyConditionExpression=Key("PK").eq("AUDIT#SIGNAL_ACCESS"),
         )
@@ -287,14 +316,15 @@ class TestAuditLogging:
         _, mp_key = marketplace_a
         _ingest_signal(mp_key, "agent-ip-test", transaction_ref="tx-ip-1")
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         result = table.query(
             KeyConditionExpression=Key("PK").eq("AUDIT#SIGNAL_ACCESS"),
         )
 
         ip_entries = [
-            i for i in result["Items"]
-            if i.get("agent_id") == "agent-ip-test"
+            i for i in result["Items"] if i.get("agent_id") == "agent-ip-test"
         ]
         assert len(ip_entries) >= 1
         assert ip_entries[0].get("ip_address") == "127.0.0.1"
@@ -358,7 +388,15 @@ class TestSanitizeSignalsForApi:
         ]
         sanitized = sanitize_signals_for_api(signals)
         assert len(sanitized) == 1
-        for field in ("PK", "SK", "GSI1PK", "GSI1SK", "GSI2PK", "GSI2SK", "marketplace_id"):
+        for field in (
+            "PK",
+            "SK",
+            "GSI1PK",
+            "GSI1SK",
+            "GSI2PK",
+            "GSI2SK",
+            "marketplace_id",
+        ):
             assert field not in sanitized[0], f"{field} should be stripped"
 
         # Ensure non-private fields are preserved
@@ -475,7 +513,9 @@ class TestSanitizeScoreResponse:
 class TestScoreQueryInternal:
     """Internal score query helper tests."""
 
-    def test_get_agent_signals_all_sources(self, dynamodb, marketplace_a, marketplace_b):
+    def test_get_agent_signals_all_sources(
+        self, dynamodb, marketplace_a, marketplace_b
+    ):
         """Internal query returns signals from all marketplaces."""
         from utils.score_query import get_agent_signals_all_sources
 
@@ -507,7 +547,10 @@ class TestScoreQueryInternal:
 
     def test_sanitize_then_no_marketplace_id(self, dynamodb, marketplace_a):
         """After sanitization, marketplace_id is gone."""
-        from utils.score_query import get_agent_signals_all_sources, sanitize_signals_for_api
+        from utils.score_query import (
+            get_agent_signals_all_sources,
+            sanitize_signals_for_api,
+        )
 
         _, mp_key = marketplace_a
         _ingest_signal(mp_key, "agent-sanitize", transaction_ref="tx-san-1")

@@ -11,7 +11,7 @@ from .monitor import AgentPierMonitor, TrustVerifier
 __version__ = "0.1.0"
 __all__ = [
     "TrustScoreChecker",
-    "AgentTrustVerifier", 
+    "AgentTrustVerifier",
     "AgentPierTaskCallback",
     "AgentPierMonitor",
     "TrustVerifier",

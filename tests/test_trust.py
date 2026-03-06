@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 # Test the scoring engine directly
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from utils.ace_scoring import (
@@ -20,17 +21,19 @@ from utils.ace_scoring import (
     PRECEDENT_CAP,
 )
 
-
 # === Helpers ===
+
 
 def _now():
     return datetime.now(timezone.utc)
+
 
 def _event(event_type, days_ago=0, **kwargs):
     ts = (_now() - timedelta(days=days_ago)).isoformat()
     e = {"event_type": event_type, "timestamp": ts}
     e.update(kwargs)
     return e
+
 
 def _profile(**kwargs):
     p = {"capabilities": [], "declared_scope": "network_call"}
@@ -39,6 +42,7 @@ def _profile(**kwargs):
 
 
 # === Trust Tier Tests ===
+
 
 class TestTrustTiers:
     def test_untrusted_boundary(self):
@@ -68,6 +72,7 @@ class TestTrustTiers:
 
 # === Decay Tests ===
 
+
 class TestDecay:
     def test_recent_event_full_weight(self):
         ts = _now().isoformat()
@@ -91,6 +96,7 @@ class TestDecay:
 
 
 # === Precedent Tests ===
+
 
 class TestPrecedent:
     def test_cold_start(self):
@@ -164,6 +170,7 @@ class TestPrecedent:
 
 # === Reversibility Tests ===
 
+
 class TestReversibility:
     def test_default_neutral(self):
         score = calculate_reversibility(_profile(), [])
@@ -180,12 +187,15 @@ class TestReversibility:
         assert score > 55
 
     def test_observed_irreversible_penalty(self):
-        events = [_event("success", reversibility_observed="irreversible") for _ in range(5)]
+        events = [
+            _event("success", reversibility_observed="irreversible") for _ in range(5)
+        ]
         score = calculate_reversibility(_profile(), events)
         assert score < 50
 
 
 # === Blast Radius Tests ===
+
 
 class TestBlastRadius:
     def test_read_only_highest(self):
@@ -202,13 +212,16 @@ class TestBlastRadius:
         """Observed behavior should pull score toward reality."""
         profile = _profile(declared_scope="read_only")  # claims safe
         # But observed doing financial ops
-        events = [_event("success", blast_radius_observed="financial") for _ in range(5)]
+        events = [
+            _event("success", blast_radius_observed="financial") for _ in range(5)
+        ]
         score = calculate_blast_radius(profile, events)
         # Should be pulled down from 95 toward 20
         assert score < 60
 
 
 # === Composite Score Tests ===
+
 
 class TestCompositeScore:
     def test_cold_start_score(self):
@@ -219,7 +232,9 @@ class TestCompositeScore:
 
     def test_established_agent(self):
         """Agent with good history should reach established+."""
-        profile = _profile(capabilities=["undo", "sandbox_execution"], declared_scope="file_write")
+        profile = _profile(
+            capabilities=["undo", "sandbox_execution"], declared_scope="file_write"
+        )
         events = [_event("success", days_ago=i) for i in range(30)]
         result = calculate_ace_score(profile, events)
         assert result["trust_score"] >= 40
@@ -235,8 +250,10 @@ class TestCompositeScore:
         assert safe_result["trust_score"] > risky_result["trust_score"]
 
     def test_score_never_exceeds_95(self):
-        profile = _profile(capabilities=["undo", "rollback", "sandbox_execution", "confirmation"],
-                          declared_scope="read_only")
+        profile = _profile(
+            capabilities=["undo", "rollback", "sandbox_execution", "confirmation"],
+            declared_scope="read_only",
+        )
         events = [_event("success") for _ in range(10000)]
         result = calculate_ace_score(profile, events)
         assert result["trust_score"] <= 95
@@ -254,6 +271,7 @@ class TestCompositeScore:
 
 
 # === Dynamic Moltbook Weight Tests ===
+
 
 class TestDynamicMoltbookWeight:
     """Tests for dynamic Moltbook weighting based on transaction count."""
@@ -287,26 +305,35 @@ class TestDynamicMoltbookWeight:
         """Test that calculate_ace_score uses dynamic weighting."""
         profile = _profile()
         events = [_event("success") for _ in range(5)]
-        
+
         # Test with different transaction counts
-        result_0_tx = calculate_ace_score(profile, events, moltbook_trust=0.5, transaction_count=0)
-        result_20_tx = calculate_ace_score(profile, events, moltbook_trust=0.5, transaction_count=20)
-        
+        result_0_tx = calculate_ace_score(
+            profile, events, moltbook_trust=0.5, transaction_count=0
+        )
+        result_20_tx = calculate_ace_score(
+            profile, events, moltbook_trust=0.5, transaction_count=20
+        )
+
         # With 0 transactions, Moltbook has 30% weight
         # With 20 transactions, Moltbook has 5% weight
         # So the score with 0 transactions should be more influenced by Moltbook
         # (assuming ACE score != 50, which would make the difference invisible)
-        
+
         # Let's test with very different Moltbook vs ACE scores to see the effect
-        result_high_moltbook = calculate_ace_score(profile, [], moltbook_trust=1.0, transaction_count=0)
-        result_low_moltbook = calculate_ace_score(profile, [], moltbook_trust=1.0, transaction_count=20)
-        
+        result_high_moltbook = calculate_ace_score(
+            profile, [], moltbook_trust=1.0, transaction_count=0
+        )
+        result_low_moltbook = calculate_ace_score(
+            profile, [], moltbook_trust=1.0, transaction_count=20
+        )
+
         # High Moltbook influence (30%) should result in higher final score than low influence (5%)
         # when Moltbook trust (100) is higher than ACE score (likely around 10-20 for new agent)
         assert result_high_moltbook["trust_score"] > result_low_moltbook["trust_score"]
 
 
 # === Karma Refresh Tests ===
+
 
 class TestKarmaRefresh:
     """Tests for Moltbook karma refresh logic (mocked integration tests)."""
@@ -316,19 +343,21 @@ class TestKarmaRefresh:
         # This would be an integration test with mocked DynamoDB and Moltbook API
         # For now, we test the TTL logic components in isolation
         from datetime import datetime, timezone, timedelta
-        
+
         # Test TTL calculation logic
         recent_time = datetime.now(timezone.utc) - timedelta(hours=12)  # 12 hours ago
-        old_time = datetime.now(timezone.utc) - timedelta(hours=25)     # 25 hours ago
-        
+        old_time = datetime.now(timezone.utc) - timedelta(hours=25)  # 25 hours ago
+
         # Recent data should not need refresh (< 24 hours)
-        hours_since_recent = (datetime.now(timezone.utc) - recent_time).total_seconds() / 3600
+        hours_since_recent = (
+            datetime.now(timezone.utc) - recent_time
+        ).total_seconds() / 3600
         should_refresh_recent = hours_since_recent >= 24
-        
+
         # Old data should need refresh (> 24 hours)
         hours_since_old = (datetime.now(timezone.utc) - old_time).total_seconds() / 3600
         should_refresh_old = hours_since_old >= 24
-        
+
         assert not should_refresh_recent
         assert should_refresh_old
 
@@ -347,15 +376,19 @@ class TestKarmaRefresh:
     def test_invalid_timestamp_triggers_refresh(self):
         """Invalid timestamp format should trigger refresh."""
         from datetime import datetime, timezone
-        
+
         invalid_timestamp = "not-a-timestamp"
         should_refresh = False
-        
+
         try:
-            last_refresh_dt = datetime.fromisoformat(invalid_timestamp.replace("Z", "+00:00"))
-            hours_since_refresh = (datetime.now(timezone.utc) - last_refresh_dt).total_seconds() / 3600
+            last_refresh_dt = datetime.fromisoformat(
+                invalid_timestamp.replace("Z", "+00:00")
+            )
+            hours_since_refresh = (
+                datetime.now(timezone.utc) - last_refresh_dt
+            ).total_seconds() / 3600
             should_refresh = hours_since_refresh >= 24
         except (ValueError, TypeError):
             should_refresh = True  # Invalid timestamp, refresh
-        
+
         assert should_refresh

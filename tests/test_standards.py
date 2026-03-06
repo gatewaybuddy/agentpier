@@ -31,9 +31,9 @@ class TestGetStandardsCurrent:
 
         # Validate semver format: MAJOR.MINOR.PATCH
         semver_pattern = r"^\d+\.\d+\.\d+$"
-        assert re.match(semver_pattern, body["version"]), (
-            f"Version {body['version']} is not valid semver"
-        )
+        assert re.match(
+            semver_pattern, body["version"]
+        ), f"Version {body['version']} is not valid semver"
 
     def test_includes_agent_and_marketplace_sections(self):
         from handlers.standards import get_standards_current
@@ -93,14 +93,21 @@ class TestGetStandardsCurrent:
 
         # Must NOT contain any scoring internals
         forbidden = [
-            "weight", "formula", "decay", "half_life", "half-life",
-            "lambda", "coefficient", "multiplier", "algorithm",
+            "weight",
+            "formula",
+            "decay",
+            "half_life",
+            "half-life",
+            "lambda",
+            "coefficient",
+            "multiplier",
+            "algorithm",
         ]
         raw_lower = raw.lower()
         for term in forbidden:
-            assert term not in raw_lower, (
-                f"Response contains forbidden scoring term: '{term}'"
-            )
+            assert (
+                term not in raw_lower
+            ), f"Response contains forbidden scoring term: '{term}'"
 
 
 class TestGetStandardsAgent:
@@ -155,7 +162,9 @@ class TestGetStandardsAgent:
             for standard in cat_data["standards"]:
                 assert "id" in standard, f"{cat_key} standard missing id"
                 assert "name" in standard, f"{cat_key} standard missing name"
-                assert "requirement" in standard, f"{cat_key} standard missing requirement"
+                assert (
+                    "requirement" in standard
+                ), f"{cat_key} standard missing requirement"
                 assert "tiers" in standard, f"{cat_key} standard missing tiers"
 
     def test_tiers_include_all_badge_levels(self):
@@ -169,9 +178,9 @@ class TestGetStandardsAgent:
         for cat_key, cat_data in body["categories"].items():
             for standard in cat_data["standards"]:
                 tier_keys = set(standard["tiers"].keys())
-                assert tier_keys == expected_tiers, (
-                    f"Standard {standard['id']} has tiers {tier_keys}, expected {expected_tiers}"
-                )
+                assert (
+                    tier_keys == expected_tiers
+                ), f"Standard {standard['id']} has tiers {tier_keys}, expected {expected_tiers}"
 
     def test_version_is_semver(self):
         from handlers.standards import get_standards_agent
@@ -205,15 +214,15 @@ class TestGetStandardsAgent:
 
         # Scoring internals must never leak into public standards
         forbidden_patterns = [
-            r"\b0\.\d{2,}\b.*weight",   # decimal weights like 0.35
-            r"decay.*\d+\.\d+",          # decay parameters
-            r"lambda.*=.*\d",            # lambda values
-            r"half.life.*\d+",           # half-life values
+            r"\b0\.\d{2,}\b.*weight",  # decimal weights like 0.35
+            r"decay.*\d+\.\d+",  # decay parameters
+            r"lambda.*=.*\d",  # lambda values
+            r"half.life.*\d+",  # half-life values
         ]
         for pattern in forbidden_patterns:
-            assert not re.search(pattern, raw, re.IGNORECASE), (
-                f"Response matches forbidden scoring pattern: {pattern}"
-            )
+            assert not re.search(
+                pattern, raw, re.IGNORECASE
+            ), f"Response matches forbidden scoring pattern: {pattern}"
 
     def test_standard_ids_are_unique(self):
         from handlers.standards import get_standards_agent
@@ -283,7 +292,9 @@ class TestGetStandardsMarketplace:
             for standard in dim_data["standards"]:
                 assert "id" in standard, f"{dim_key} standard missing id"
                 assert "name" in standard, f"{dim_key} standard missing name"
-                assert "requirement" in standard, f"{dim_key} standard missing requirement"
+                assert (
+                    "requirement" in standard
+                ), f"{dim_key} standard missing requirement"
                 assert "tiers" in standard, f"{dim_key} standard missing tiers"
 
     def test_marketplace_tiers_include_all_levels(self):
@@ -293,13 +304,19 @@ class TestGetStandardsMarketplace:
         resp = get_standards_marketplace(event, {})
         body = json.loads(resp["body"])
 
-        expected_tiers = {"registered", "verified", "trusted", "certified", "enterprise"}
+        expected_tiers = {
+            "registered",
+            "verified",
+            "trusted",
+            "certified",
+            "enterprise",
+        }
         for dim_key, dim_data in body["dimensions"].items():
             for standard in dim_data["standards"]:
                 tier_keys = set(standard["tiers"].keys())
-                assert tier_keys == expected_tiers, (
-                    f"Standard {standard['id']} has tiers {tier_keys}, expected {expected_tiers}"
-                )
+                assert (
+                    tier_keys == expected_tiers
+                ), f"Standard {standard['id']} has tiers {tier_keys}, expected {expected_tiers}"
 
     def test_version_is_semver(self):
         from handlers.standards import get_standards_marketplace
@@ -332,14 +349,18 @@ class TestGetStandardsMarketplace:
 
         # Must not contain dimension weight values
         forbidden = [
-            "0.30", "0.20", "0.15",  # actual dimension weights from scoring
-            "weight_factor", "source_weight",
-            "decay_rate", "half_life",
+            "0.30",
+            "0.20",
+            "0.15",  # actual dimension weights from scoring
+            "weight_factor",
+            "source_weight",
+            "decay_rate",
+            "half_life",
         ]
         for term in forbidden:
-            assert term not in raw, (
-                f"Response contains forbidden scoring detail: '{term}'"
-            )
+            assert (
+                term not in raw
+            ), f"Response contains forbidden scoring detail: '{term}'"
 
     def test_standard_ids_are_unique(self):
         from handlers.standards import get_standards_marketplace

@@ -17,34 +17,38 @@ def sample_marketplace(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "GSI1PK": "MARKETPLACE_NAME#Signals Test MP",
-        "GSI1SK": "META",
-        "marketplace_id": marketplace_id,
-        "name": "Signals Test MP",
-        "url": "https://signals-test.example.com",
-        "description": "A test marketplace for signal ingestion",
-        "contact_email": "admin@signals-test.example.com",
-        "api_key_hash": key_hash,
-        "registered_at": now,
-        "verified_at": None,
-        "marketplace_score": Decimal("0"),
-        "tier": "registered",
-        "signal_count": 0,
-        "last_signal_at": None,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "GSI1PK": "MARKETPLACE_NAME#Signals Test MP",
+            "GSI1SK": "META",
+            "marketplace_id": marketplace_id,
+            "name": "Signals Test MP",
+            "url": "https://signals-test.example.com",
+            "description": "A test marketplace for signal ingestion",
+            "contact_email": "admin@signals-test.example.com",
+            "api_key_hash": key_hash,
+            "registered_at": now,
+            "verified_at": None,
+            "marketplace_score": Decimal("0"),
+            "tier": "registered",
+            "signal_count": 0,
+            "last_signal_at": None,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "marketplace_id": marketplace_id,
-        "key_hash": key_hash,
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "marketplace_id": marketplace_id,
+            "key_hash": key_hash,
+            "created_at": now,
+        }
+    )
 
     return marketplace_id, raw_key
 
@@ -58,34 +62,38 @@ def second_marketplace(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": "PROFILE",
-        "GSI1PK": "MARKETPLACE_NAME#Other Test MP",
-        "GSI1SK": "META",
-        "marketplace_id": marketplace_id,
-        "name": "Other Test MP",
-        "url": "https://other-test.example.com",
-        "description": "Another test marketplace",
-        "contact_email": "admin@other-test.example.com",
-        "api_key_hash": key_hash,
-        "registered_at": now,
-        "verified_at": None,
-        "marketplace_score": Decimal("0"),
-        "tier": "registered",
-        "signal_count": 0,
-        "last_signal_at": None,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": "PROFILE",
+            "GSI1PK": "MARKETPLACE_NAME#Other Test MP",
+            "GSI1SK": "META",
+            "marketplace_id": marketplace_id,
+            "name": "Other Test MP",
+            "url": "https://other-test.example.com",
+            "description": "Another test marketplace",
+            "contact_email": "admin@other-test.example.com",
+            "api_key_hash": key_hash,
+            "registered_at": now,
+            "verified_at": None,
+            "marketplace_score": Decimal("0"),
+            "tier": "registered",
+            "signal_count": 0,
+            "last_signal_at": None,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"MARKETPLACE#{marketplace_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "marketplace_id": marketplace_id,
-        "key_hash": key_hash,
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"MARKETPLACE#{marketplace_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "marketplace_id": marketplace_id,
+            "key_hash": key_hash,
+            "created_at": now,
+        }
+    )
 
     return marketplace_id, raw_key
 
@@ -116,18 +124,21 @@ class TestIngestSignalsSingle:
         from handlers.signals import ingest_signals
 
         mp_id, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "metrics": {
-                "completion_time_ms": 4200,
-                "error_count": 0,
-                "user_rating": 5,
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+                "metrics": {
+                    "completion_time_ms": 4200,
+                    "error_count": 0,
+                    "user_rating": 5,
+                },
+                "transaction_ref": "tx-789",
+                "timestamp": "2026-03-04T10:00:00Z",
             },
-            "transaction_ref": "tx-789",
-            "timestamp": "2026-03-04T10:00:00Z",
-        })
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
 
@@ -143,11 +154,14 @@ class TestIngestSignalsSingle:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-100",
-            "signal_type": "availability",
-            "outcome": "down",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-100",
+                "signal_type": "availability",
+                "outcome": "down",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
         assert json.loads(resp["body"])["accepted"] == 1
@@ -156,12 +170,15 @@ class TestIngestSignalsSingle:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-200",
-            "signal_type": "user_feedback",
-            "outcome": "completed",
-            "metrics": {"user_rating": 4},
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-200",
+                "signal_type": "user_feedback",
+                "outcome": "completed",
+                "metrics": {"user_rating": 4},
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
 
@@ -169,11 +186,14 @@ class TestIngestSignalsSingle:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-300",
-            "signal_type": "incident",
-            "outcome": "security",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-300",
+                "signal_type": "incident",
+                "outcome": "security",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
 
@@ -181,11 +201,14 @@ class TestIngestSignalsSingle:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
 
@@ -197,28 +220,31 @@ class TestIngestSignalsBatch:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "signals": [
-                {
-                    "agent_id": "agent-1",
-                    "signal_type": "transaction_outcome",
-                    "outcome": "completed",
-                    "transaction_ref": "tx-batch-1",
-                },
-                {
-                    "agent_id": "agent-2",
-                    "signal_type": "availability",
-                    "outcome": "up",
-                    "transaction_ref": "tx-batch-2",
-                },
-                {
-                    "agent_id": "agent-3",
-                    "signal_type": "incident",
-                    "outcome": "safety",
-                    "transaction_ref": "tx-batch-3",
-                },
-            ]
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "signals": [
+                    {
+                        "agent_id": "agent-1",
+                        "signal_type": "transaction_outcome",
+                        "outcome": "completed",
+                        "transaction_ref": "tx-batch-1",
+                    },
+                    {
+                        "agent_id": "agent-2",
+                        "signal_type": "availability",
+                        "outcome": "up",
+                        "transaction_ref": "tx-batch-2",
+                    },
+                    {
+                        "agent_id": "agent-3",
+                        "signal_type": "incident",
+                        "outcome": "safety",
+                        "transaction_ref": "tx-batch-3",
+                    },
+                ]
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 201
 
@@ -232,7 +258,11 @@ class TestIngestSignalsBatch:
 
         _, raw_key = sample_marketplace
         signals = [
-            {"agent_id": f"agent-{i}", "signal_type": "transaction_outcome", "outcome": "completed"}
+            {
+                "agent_id": f"agent-{i}",
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+            }
             for i in range(101)
         ]
         event = _signal_event(raw_key, {"signals": signals})
@@ -263,21 +293,24 @@ class TestIngestSignalsBatch:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "signals": [
-                {
-                    "agent_id": "agent-good",
-                    "signal_type": "transaction_outcome",
-                    "outcome": "completed",
-                    "transaction_ref": "tx-good",
-                },
-                {
-                    "agent_id": "agent-bad",
-                    "signal_type": "INVALID_TYPE",
-                    "outcome": "completed",
-                },
-            ]
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "signals": [
+                    {
+                        "agent_id": "agent-good",
+                        "signal_type": "transaction_outcome",
+                        "outcome": "completed",
+                        "transaction_ref": "tx-good",
+                    },
+                    {
+                        "agent_id": "agent-bad",
+                        "signal_type": "INVALID_TYPE",
+                        "outcome": "completed",
+                    },
+                ]
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_signal_type"
@@ -318,31 +351,43 @@ class TestIdempotency:
         _, raw_key = sample_marketplace
 
         # Submit first signal
-        resp = ingest_signals(_signal_event(raw_key, {
-            "agent_id": "agent-1",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "transaction_ref": "tx-dup-mix",
-        }), {})
-        assert resp["statusCode"] == 201
-
-        # Submit batch with one duplicate and one new
-        resp2 = ingest_signals(_signal_event(raw_key, {
-            "signals": [
+        resp = ingest_signals(
+            _signal_event(
+                raw_key,
                 {
                     "agent_id": "agent-1",
                     "signal_type": "transaction_outcome",
                     "outcome": "completed",
                     "transaction_ref": "tx-dup-mix",
                 },
+            ),
+            {},
+        )
+        assert resp["statusCode"] == 201
+
+        # Submit batch with one duplicate and one new
+        resp2 = ingest_signals(
+            _signal_event(
+                raw_key,
                 {
-                    "agent_id": "agent-2",
-                    "signal_type": "transaction_outcome",
-                    "outcome": "failed",
-                    "transaction_ref": "tx-new",
+                    "signals": [
+                        {
+                            "agent_id": "agent-1",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "completed",
+                            "transaction_ref": "tx-dup-mix",
+                        },
+                        {
+                            "agent_id": "agent-2",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "failed",
+                            "transaction_ref": "tx-new",
+                        },
+                    ]
                 },
-            ]
-        }), {})
+            ),
+            {},
+        )
         assert resp2["statusCode"] == 201  # 201 because there's at least one new
         body = json.loads(resp2["body"])
         assert body["accepted"] == 1
@@ -373,11 +418,14 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "nonexistent_type",
-            "outcome": "completed",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "nonexistent_type",
+                "outcome": "completed",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_signal_type"
@@ -386,11 +434,14 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "transaction_outcome",
-            "outcome": "up",  # valid for availability, not transaction_outcome
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "transaction_outcome",
+                "outcome": "up",  # valid for availability, not transaction_outcome
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_outcome"
@@ -399,10 +450,13 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_agent_id"
@@ -411,11 +465,14 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "user_feedback",
-            "outcome": "completed",
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "user_feedback",
+                "outcome": "completed",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "missing_user_rating"
@@ -424,12 +481,15 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "user_feedback",
-            "outcome": "completed",
-            "metrics": {"user_rating": 6},
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "user_feedback",
+                "outcome": "completed",
+                "metrics": {"user_rating": 6},
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_user_rating"
@@ -438,12 +498,15 @@ class TestValidation:
         from handlers.signals import ingest_signals
 
         _, raw_key = sample_marketplace
-        event = _signal_event(raw_key, {
-            "agent_id": "agent-456",
-            "signal_type": "user_feedback",
-            "outcome": "completed",
-            "metrics": {"user_rating": 0},
-        })
+        event = _signal_event(
+            raw_key,
+            {
+                "agent_id": "agent-456",
+                "signal_type": "user_feedback",
+                "outcome": "completed",
+                "metrics": {"user_rating": 0},
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 400
         assert json.loads(resp["body"])["error"] == "invalid_user_rating"
@@ -484,11 +547,14 @@ class TestAuthentication:
     def test_wrong_key_rejected(self, dynamodb, sample_marketplace):
         from handlers.signals import ingest_signals
 
-        event = _signal_event("ap_live_boguskeyboguskeyboguskey1234567890", {
-            "agent_id": "agent-456",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-        })
+        event = _signal_event(
+            "ap_live_boguskeyboguskeyboguskey1234567890",
+            {
+                "agent_id": "agent-456",
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+            },
+        )
         resp = ingest_signals(event, {})
         assert resp["statusCode"] == 401
 
@@ -512,11 +578,14 @@ class TestRateLimiting:
 
         _, raw_key = sample_marketplace
         with patch("handlers.signals.check_rate_limit", return_value=(False, 0, 3600)):
-            event = _signal_event(raw_key, {
-                "agent_id": "agent-456",
-                "signal_type": "transaction_outcome",
-                "outcome": "completed",
-            })
+            event = _signal_event(
+                raw_key,
+                {
+                    "agent_id": "agent-456",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                },
+            )
             resp = ingest_signals(event, {})
 
         assert resp["statusCode"] == 429
@@ -545,13 +614,34 @@ class TestSignalStats:
         mp_id, raw_key = sample_marketplace
 
         # Ingest some signals
-        ingest_signals(_signal_event(raw_key, {
-            "signals": [
-                {"agent_id": "a1", "signal_type": "transaction_outcome", "outcome": "completed", "transaction_ref": "s1"},
-                {"agent_id": "a2", "signal_type": "transaction_outcome", "outcome": "failed", "transaction_ref": "s2"},
-                {"agent_id": "a3", "signal_type": "availability", "outcome": "up", "transaction_ref": "s3"},
-            ]
-        }), {})
+        ingest_signals(
+            _signal_event(
+                raw_key,
+                {
+                    "signals": [
+                        {
+                            "agent_id": "a1",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "completed",
+                            "transaction_ref": "s1",
+                        },
+                        {
+                            "agent_id": "a2",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "failed",
+                            "transaction_ref": "s2",
+                        },
+                        {
+                            "agent_id": "a3",
+                            "signal_type": "availability",
+                            "outcome": "up",
+                            "transaction_ref": "s3",
+                        },
+                    ]
+                },
+            ),
+            {},
+        )
 
         resp = get_signal_stats(_stats_event(raw_key), {})
         assert resp["statusCode"] == 200
@@ -571,7 +661,9 @@ class TestSignalStats:
 class TestDataFirewall:
     """Marketplace isolation / data firewall tests."""
 
-    def test_signals_stored_with_marketplace_isolation(self, dynamodb, sample_marketplace, second_marketplace):
+    def test_signals_stored_with_marketplace_isolation(
+        self, dynamodb, sample_marketplace, second_marketplace
+    ):
         from handlers.signals import ingest_signals
         import boto3
 
@@ -579,22 +671,36 @@ class TestDataFirewall:
         mp2_id, mp2_key = second_marketplace
 
         # MP1 submits a signal for agent-shared
-        ingest_signals(_signal_event(mp1_key, {
-            "agent_id": "agent-shared",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "transaction_ref": "tx-mp1",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp1_key,
+                {
+                    "agent_id": "agent-shared",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "transaction_ref": "tx-mp1",
+                },
+            ),
+            {},
+        )
 
         # MP2 submits a signal for the same agent
-        ingest_signals(_signal_event(mp2_key, {
-            "agent_id": "agent-shared",
-            "signal_type": "transaction_outcome",
-            "outcome": "failed",
-            "transaction_ref": "tx-mp2",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp2_key,
+                {
+                    "agent_id": "agent-shared",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "failed",
+                    "transaction_ref": "tx-mp2",
+                },
+            ),
+            {},
+        )
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
 
         # Verify signals are partitioned by marketplace in PK
         from boto3.dynamodb.conditions import Key
@@ -613,7 +719,9 @@ class TestDataFirewall:
         assert mp2_signals["Items"][0]["outcome"] == "failed"
         assert mp2_signals["Items"][0]["marketplace_id"] == mp2_id
 
-    def test_gsi1_allows_agent_signal_query(self, dynamodb, sample_marketplace, second_marketplace):
+    def test_gsi1_allows_agent_signal_query(
+        self, dynamodb, sample_marketplace, second_marketplace
+    ):
         """GSI1 allows querying all signals for an agent across marketplaces."""
         from handlers.signals import ingest_signals
         import boto3
@@ -622,21 +730,35 @@ class TestDataFirewall:
         _, mp2_key = second_marketplace
 
         # Both marketplaces submit signals for the same agent
-        ingest_signals(_signal_event(mp1_key, {
-            "agent_id": "agent-cross",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "transaction_ref": "tx-cross-1",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp1_key,
+                {
+                    "agent_id": "agent-cross",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "transaction_ref": "tx-cross-1",
+                },
+            ),
+            {},
+        )
 
-        ingest_signals(_signal_event(mp2_key, {
-            "agent_id": "agent-cross",
-            "signal_type": "availability",
-            "outcome": "up",
-            "transaction_ref": "tx-cross-2",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp2_key,
+                {
+                    "agent_id": "agent-cross",
+                    "signal_type": "availability",
+                    "outcome": "up",
+                    "transaction_ref": "tx-cross-2",
+                },
+            ),
+            {},
+        )
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         from boto3.dynamodb.conditions import Key
 
         # GSI1 query should return both signals
@@ -648,7 +770,9 @@ class TestDataFirewall:
         signals = [i for i in result["Items"] if i["PK"].startswith("SIGNAL#")]
         assert len(signals) == 2
 
-    def test_stats_only_show_own_marketplace(self, dynamodb, sample_marketplace, second_marketplace):
+    def test_stats_only_show_own_marketplace(
+        self, dynamodb, sample_marketplace, second_marketplace
+    ):
         """Stats endpoint only shows a marketplace their OWN submission stats."""
         from handlers.signals import ingest_signals, get_signal_stats
 
@@ -656,20 +780,42 @@ class TestDataFirewall:
         mp2_id, mp2_key = second_marketplace
 
         # MP1 submits 2 signals
-        ingest_signals(_signal_event(mp1_key, {
-            "signals": [
-                {"agent_id": "a1", "signal_type": "transaction_outcome", "outcome": "completed", "transaction_ref": "s-own-1"},
-                {"agent_id": "a2", "signal_type": "availability", "outcome": "up", "transaction_ref": "s-own-2"},
-            ]
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp1_key,
+                {
+                    "signals": [
+                        {
+                            "agent_id": "a1",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "completed",
+                            "transaction_ref": "s-own-1",
+                        },
+                        {
+                            "agent_id": "a2",
+                            "signal_type": "availability",
+                            "outcome": "up",
+                            "transaction_ref": "s-own-2",
+                        },
+                    ]
+                },
+            ),
+            {},
+        )
 
         # MP2 submits 1 signal
-        ingest_signals(_signal_event(mp2_key, {
-            "agent_id": "a1",
-            "signal_type": "incident",
-            "outcome": "security",
-            "transaction_ref": "s-own-3",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                mp2_key,
+                {
+                    "agent_id": "a1",
+                    "signal_type": "incident",
+                    "outcome": "security",
+                    "transaction_ref": "s-own-3",
+                },
+            ),
+            {},
+        )
 
         # MP1 stats should show 2
         resp1 = get_signal_stats(_stats_event(mp1_key), {})
@@ -693,14 +839,22 @@ class TestCounterUpdates:
 
         mp_id, raw_key = sample_marketplace
 
-        ingest_signals(_signal_event(raw_key, {
-            "agent_id": "agent-counter",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "transaction_ref": "tx-counter-1",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                raw_key,
+                {
+                    "agent_id": "agent-counter",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "transaction_ref": "tx-counter-1",
+                },
+            ),
+            {},
+        )
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         mp = table.get_item(Key={"PK": f"MARKETPLACE#{mp_id}", "SK": "PROFILE"})["Item"]
         assert int(mp["signal_count"]) == 1
         assert mp["last_signal_at"] is not None
@@ -711,15 +865,38 @@ class TestCounterUpdates:
 
         mp_id, raw_key = sample_marketplace
 
-        ingest_signals(_signal_event(raw_key, {
-            "signals": [
-                {"agent_id": "a1", "signal_type": "transaction_outcome", "outcome": "completed", "transaction_ref": "tx-cb-1"},
-                {"agent_id": "a2", "signal_type": "availability", "outcome": "up", "transaction_ref": "tx-cb-2"},
-                {"agent_id": "a3", "signal_type": "incident", "outcome": "safety", "transaction_ref": "tx-cb-3"},
-            ]
-        }), {})
+        ingest_signals(
+            _signal_event(
+                raw_key,
+                {
+                    "signals": [
+                        {
+                            "agent_id": "a1",
+                            "signal_type": "transaction_outcome",
+                            "outcome": "completed",
+                            "transaction_ref": "tx-cb-1",
+                        },
+                        {
+                            "agent_id": "a2",
+                            "signal_type": "availability",
+                            "outcome": "up",
+                            "transaction_ref": "tx-cb-2",
+                        },
+                        {
+                            "agent_id": "a3",
+                            "signal_type": "incident",
+                            "outcome": "safety",
+                            "transaction_ref": "tx-cb-3",
+                        },
+                    ]
+                },
+            ),
+            {},
+        )
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         mp = table.get_item(Key={"PK": f"MARKETPLACE#{mp_id}", "SK": "PROFILE"})["Item"]
         assert int(mp["signal_count"]) == 3
 
@@ -729,23 +906,33 @@ class TestCounterUpdates:
         import boto3
 
         mp_id, raw_key = sample_marketplace
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
 
         # Create an agent trust profile
-        table.put_item(Item={
-            "PK": "AGENT#agent-trust",
-            "SK": "TRUST",
-            "agent_id": "agent-trust",
-            "signal_count": 0,
-            "trust_score": Decimal("0.5"),
-        })
+        table.put_item(
+            Item={
+                "PK": "AGENT#agent-trust",
+                "SK": "TRUST",
+                "agent_id": "agent-trust",
+                "signal_count": 0,
+                "trust_score": Decimal("0.5"),
+            }
+        )
 
-        ingest_signals(_signal_event(raw_key, {
-            "agent_id": "agent-trust",
-            "signal_type": "transaction_outcome",
-            "outcome": "completed",
-            "transaction_ref": "tx-trust-1",
-        }), {})
+        ingest_signals(
+            _signal_event(
+                raw_key,
+                {
+                    "agent_id": "agent-trust",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "transaction_ref": "tx-trust-1",
+                },
+            ),
+            {},
+        )
 
         agent = table.get_item(Key={"PK": "AGENT#agent-trust", "SK": "TRUST"})["Item"]
         assert int(agent["signal_count"]) == 1
@@ -766,6 +953,8 @@ class TestCounterUpdates:
         ingest_signals(_signal_event(raw_key, signal), {})
         ingest_signals(_signal_event(raw_key, signal), {})
 
-        table = boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        table = boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
         mp = table.get_item(Key={"PK": f"MARKETPLACE#{mp_id}", "SK": "PROFILE"})["Item"]
         assert int(mp["signal_count"]) == 1  # not 2

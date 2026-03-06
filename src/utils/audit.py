@@ -17,9 +17,14 @@ def _get_table():
     return dynamodb.Table(TABLE_NAME)
 
 
-def log_signal_access(accessor_id: str, accessor_type: str, agent_id: str,
-                      marketplace_id: str = None, action: str = "read",
-                      ip_address: str = None):
+def log_signal_access(
+    accessor_id: str,
+    accessor_type: str,
+    agent_id: str,
+    marketplace_id: str = None,
+    action: str = "read",
+    ip_address: str = None,
+):
     """Log access to signal data for security audit trail.
 
     Args:

@@ -65,7 +65,9 @@ def dynamodb(aws_credentials):
             ],
             BillingMode="PAY_PER_REQUEST",
         )
-        yield boto3.resource("dynamodb", region_name="us-east-1").Table("agentpier-test")
+        yield boto3.resource("dynamodb", region_name="us-east-1").Table(
+            "agentpier-test"
+        )
 
 
 @pytest.fixture
@@ -77,46 +79,57 @@ def sample_user(dynamodb):
     raw_key, key_hash = generate_api_key()
     now = datetime.now(timezone.utc).isoformat()
 
-    dynamodb.put_item(Item={
-        "PK": f"USER#{user_id}",
-        "SK": "META",
-        "GSI1PK": f"AGENT_NAME#testbot",
-        "GSI1SK": now,
-        "user_id": user_id,
-        "agent_name": "testbot",
-        "description": "A test agent",
-        "operator_email": "test@example.com",
-        "human_verified": False,
-        "trust_score": Decimal("0.5"),
-        "listings_count": 2,
-        "transactions_completed": 5,
-        "disputes": 0,
-        "dispute_rate": Decimal("0.0"),
-        "created_at": now,
-        "updated_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"USER#{user_id}",
+            "SK": "META",
+            "GSI1PK": f"AGENT_NAME#testbot",
+            "GSI1SK": now,
+            "user_id": user_id,
+            "agent_name": "testbot",
+            "description": "A test agent",
+            "operator_email": "test@example.com",
+            "human_verified": False,
+            "trust_score": Decimal("0.5"),
+            "listings_count": 2,
+            "transactions_completed": 5,
+            "disputes": 0,
+            "dispute_rate": Decimal("0.0"),
+            "created_at": now,
+            "updated_at": now,
+        }
+    )
 
-    dynamodb.put_item(Item={
-        "PK": f"USER#{user_id}",
-        "SK": f"APIKEY#{key_hash[:16]}",
-        "GSI2PK": f"APIKEY#{key_hash}",
-        "GSI2SK": now,
-        "user_id": user_id,
-        "key_hash": key_hash,
-        "permissions": ["read", "write"],
-        "created_at": now,
-    })
+    dynamodb.put_item(
+        Item={
+            "PK": f"USER#{user_id}",
+            "SK": f"APIKEY#{key_hash[:16]}",
+            "GSI2PK": f"APIKEY#{key_hash}",
+            "GSI2SK": now,
+            "user_id": user_id,
+            "key_hash": key_hash,
+            "permissions": ["read", "write"],
+            "created_at": now,
+        }
+    )
 
     return user_id, raw_key
 
 
-def make_api_event(method="GET", path="/", body=None, headers=None,
-                   path_params=None, query_params=None, api_key=None):
+def make_api_event(
+    method="GET",
+    path="/",
+    body=None,
+    headers=None,
+    path_params=None,
+    query_params=None,
+    api_key=None,
+):
     """Build a mock API Gateway event."""
     hdrs = headers or {}
     if api_key:
         hdrs["x-api-key"] = api_key
-    
+
     event = {
         "httpMethod": method,
         "path": path,
@@ -131,5 +144,6 @@ def make_api_event(method="GET", path="/", body=None, headers=None,
     }
     if body is not None:
         import json
+
         event["body"] = json.dumps(body) if isinstance(body, dict) else body
     return event

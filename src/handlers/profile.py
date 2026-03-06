@@ -43,14 +43,21 @@ def _get_table():
 def _hash_password(password: str) -> str:
     """Hash a password with scrypt (stdlib, no native deps)."""
     import hashlib, os, base64
+
     salt = os.urandom(16)
     dk = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1, dklen=32)
-    return "$scrypt$" + base64.b64encode(salt).decode() + "$" + base64.b64encode(dk).decode()
+    return (
+        "$scrypt$"
+        + base64.b64encode(salt).decode()
+        + "$"
+        + base64.b64encode(dk).decode()
+    )
 
 
 def _verify_password(password: str, password_hash: str) -> bool:
     """Verify a password against a stored hash (scrypt, argon2, or bcrypt)."""
     import hashlib, base64
+
     if password_hash.startswith("$scrypt$"):
         parts = password_hash.split("$")
         # Format: $scrypt$<salt_b64>$<dk_b64>
@@ -64,6 +71,7 @@ def _verify_password(password: str, password_hash: str) -> bool:
         try:
             from argon2 import PasswordHasher
             from argon2.exceptions import VerifyMismatchError
+
             ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
             return ph.verify(password_hash, password)
         except (ImportError, VerifyMismatchError):
@@ -71,6 +79,7 @@ def _verify_password(password: str, password_hash: str) -> bool:
     elif password_hash.startswith("$2"):
         try:
             import bcrypt
+
             return bcrypt.checkpw(password.encode(), password_hash.encode())
         except ImportError:
             return False
@@ -125,7 +134,10 @@ def _validate_profile_fields(body: dict) -> tuple[dict, str | None]:
             return {}, f"capabilities max {MAX_CAPABILITIES} items"
         for c in caps:
             if not isinstance(c, str) or len(c) > MAX_CAPABILITY_LEN:
-                return {}, f"each capability must be a string of max {MAX_CAPABILITY_LEN} chars"
+                return (
+                    {},
+                    f"each capability must be a string of max {MAX_CAPABILITY_LEN} chars",
+                )
         fields["capabilities"] = caps
 
     if "contact_method" in body:
@@ -135,7 +147,10 @@ def _validate_profile_fields(body: dict) -> tuple[dict, str | None]:
                 return {}, "contact_method must be an object"
             cm_type = cm.get("type")
             if cm_type not in VALID_CONTACT_TYPES:
-                return {}, f"contact_method.type must be one of: {', '.join(sorted(VALID_CONTACT_TYPES))}"
+                return (
+                    {},
+                    f"contact_method.type must be one of: {', '.join(sorted(VALID_CONTACT_TYPES))}",
+                )
             endpoint = cm.get("endpoint", "")
             if not endpoint or not isinstance(endpoint, str):
                 return {}, "contact_method.endpoint is required"
@@ -173,15 +188,20 @@ def _lookup_user_by_username(table, username: str) -> dict | None:
 # POST /auth/login
 # ============================================================
 
+
 @handler
 def login(event, context):
     """POST /auth/login — Authenticate with username + password, return success confirmation."""
     # Auth failure lockout
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     # Rate limit: 10 login attempts per IP per minute
-    allowed, remaining, retry_after = check_rate_limit(event, "login", max_requests=20, window_seconds=60)
+    allowed, remaining, retry_after = check_rate_limit(
+        event, "login", max_requests=20, window_seconds=60
+    )
     if not allowed:
         return too_many_requests("Login rate limit exceeded", retry_after)
 
@@ -225,22 +245,27 @@ def login(event, context):
     )
 
     # Return success without API key (security fix)
-    return success({
-        "user_id": user_id,
-        "username": user.get("username"),
-        "note": "API key was provided at registration. Use POST /auth/rotate-key to generate a new one if lost.",
-    })
+    return success(
+        {
+            "user_id": user_id,
+            "username": user.get("username"),
+            "note": "API key was provided at registration. Use POST /auth/rotate-key to generate a new one if lost.",
+        }
+    )
 
 
 # ============================================================
 # PATCH /auth/profile
 # ============================================================
 
+
 @handler
 def update_profile(event, context):
     """PATCH /auth/profile — Update profile fields."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     user = authenticate(event)
     if not user:
@@ -301,11 +326,14 @@ def update_profile(event, context):
 # POST /auth/change-password
 # ============================================================
 
+
 @handler
 def change_password(event, context):
     """POST /auth/change-password — Change password (requires current password)."""
     if check_auth_failures(event):
-        return too_many_requests("Too many failed auth attempts. Try again in 5 minutes.", 300)
+        return too_many_requests(
+            "Too many failed auth attempts. Try again in 5 minutes.", 300
+        )
 
     user = authenticate(event)
     if not user:
@@ -352,6 +380,7 @@ def change_password(event, context):
 # GET /agents/{username} — Public profile
 # ============================================================
 
+
 @handler
 def get_public_profile(event, context):
     """GET /agents/{username} — Public agent profile (no auth required)."""
@@ -387,4 +416,4 @@ def get_public_profile(event, context):
 # POST /auth/migrate — Add username/password to legacy account
 # ============================================================
 
-    # migrate() removed — no legacy API-key-only accounts to migrate (pre-launch cleanup)
+# migrate() removed — no legacy API-key-only accounts to migrate (pre-launch cleanup)

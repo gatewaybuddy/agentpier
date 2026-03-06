@@ -15,14 +15,15 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from tests.conftest import make_api_event
 
-
 # ---------------------------------------------------------------------------
 # 1. Unit tests for calculate_enhanced_trust_score()
 # ---------------------------------------------------------------------------
+
 
 class TestEnhancedTrustScore:
     """Tests for the spec's enhanced trust formula (0-100 scale)."""
@@ -98,14 +99,18 @@ class TestEnhancedTrustScore:
         from handlers.moltbook import calculate_enhanced_trust_score
 
         # 5 posts * 2 + 50 comments * 0.1 = 10 + 5 = 15
-        profile = {"agent": {"is_claimed": True, "posts_count": 5, "comments_count": 50}}
+        profile = {
+            "agent": {"is_claimed": True, "posts_count": 5, "comments_count": 50}
+        }
         result = calculate_enhanced_trust_score(profile)
         assert result["breakdown"]["activity"] == 15
 
     def test_activity_caps_at_20(self):
         from handlers.moltbook import calculate_enhanced_trust_score
 
-        profile = {"agent": {"is_claimed": True, "posts_count": 100, "comments_count": 1000}}
+        profile = {
+            "agent": {"is_claimed": True, "posts_count": 100, "comments_count": 1000}
+        }
         result = calculate_enhanced_trust_score(profile)
         assert result["breakdown"]["activity"] == 20
 
@@ -123,9 +128,13 @@ class TestEnhancedTrustScore:
 
         profile = {
             "agent": {
-                "karma": 50, "is_claimed": True, "is_active": True,
-                "follower_count": 3, "following_count": 16,
-                "posts_count": 2, "comments_count": 5,
+                "karma": 50,
+                "is_claimed": True,
+                "is_active": True,
+                "follower_count": 3,
+                "following_count": 16,
+                "posts_count": 2,
+                "comments_count": 5,
             }
         }
         result = calculate_enhanced_trust_score(profile)
@@ -141,6 +150,7 @@ class TestEnhancedTrustScore:
 # 2. Handler tests: moltbook_verify_initiate
 # ---------------------------------------------------------------------------
 
+
 class TestMoltbookVerifyInitiate:
 
     @patch("handlers.moltbook.fetch_trust_metrics")
@@ -148,12 +158,11 @@ class TestMoltbookVerifyInitiate:
         from handlers.moltbook import moltbook_verify_initiate
 
         user_id, raw_key = sample_user
-        mock_fetch.return_value = {
-            "agent": {"name": "testbot", "is_claimed": True}
-        }
+        mock_fetch.return_value = {"agent": {"name": "testbot", "is_claimed": True}}
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "testbot"},
             api_key=raw_key,
         )
@@ -171,7 +180,8 @@ class TestMoltbookVerifyInitiate:
         from handlers.moltbook import moltbook_verify_initiate
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "testbot"},
         )
         resp = moltbook_verify_initiate(event, None)
@@ -182,7 +192,8 @@ class TestMoltbookVerifyInitiate:
 
         _, raw_key = sample_user
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={},
             api_key=raw_key,
         )
@@ -198,7 +209,8 @@ class TestMoltbookVerifyInitiate:
         mock_fetch.side_effect = MoltbookNotFoundError("not found")
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "nonexistent"},
             api_key=raw_key,
         )
@@ -215,7 +227,8 @@ class TestMoltbookVerifyInitiate:
         }
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "unclaimed-bot"},
             api_key=raw_key,
         )
@@ -238,7 +251,8 @@ class TestMoltbookVerifyInitiate:
         )
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "testbot"},
             api_key=raw_key,
         )
@@ -249,6 +263,7 @@ class TestMoltbookVerifyInitiate:
 # ---------------------------------------------------------------------------
 # 3. Handler tests: moltbook_verify_confirm
 # ---------------------------------------------------------------------------
+
 
 class TestMoltbookVerifyConfirm:
 
@@ -264,7 +279,9 @@ class TestMoltbookVerifyConfirm:
                 "name": "verifybot",
                 "is_claimed": True,
                 "karma": 100,
-                "created_at": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+                "created_at": (
+                    datetime.now(timezone.utc) - timedelta(days=30)
+                ).isoformat(),
                 "follower_count": 5,
                 "posts_count": 3,
                 "comments_count": 10,
@@ -273,7 +290,8 @@ class TestMoltbookVerifyConfirm:
         }
 
         init_event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "verifybot"},
             api_key=raw_key,
         )
@@ -287,7 +305,9 @@ class TestMoltbookVerifyConfirm:
                 "name": "verifybot",
                 "is_claimed": True,
                 "karma": 100,
-                "created_at": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+                "created_at": (
+                    datetime.now(timezone.utc) - timedelta(days=30)
+                ).isoformat(),
                 "follower_count": 5,
                 "posts_count": 3,
                 "comments_count": 10,
@@ -298,7 +318,8 @@ class TestMoltbookVerifyConfirm:
         }
 
         confirm_event = make_api_event(
-            method="POST", path="/moltbook/verify/confirm",
+            method="POST",
+            path="/moltbook/verify/confirm",
             api_key=raw_key,
         )
         resp = moltbook_verify_confirm(confirm_event, None)
@@ -313,9 +334,7 @@ class TestMoltbookVerifyConfirm:
         assert "raw_signals" in body
 
         # Verify DynamoDB updated
-        item = dynamodb.get_item(
-            Key={"PK": f"USER#{user_id}", "SK": "META"}
-        )["Item"]
+        item = dynamodb.get_item(Key={"PK": f"USER#{user_id}", "SK": "META"})["Item"]
         assert item["moltbook_verified"] is True
         assert item["moltbook_name"] == "verifybot"
         assert item["moltbook_verification_method"] == "challenge_response"
@@ -331,7 +350,8 @@ class TestMoltbookVerifyConfirm:
 
         _, raw_key = sample_user
         event = make_api_event(
-            method="POST", path="/moltbook/verify/confirm",
+            method="POST",
+            path="/moltbook/verify/confirm",
             api_key=raw_key,
         )
         resp = moltbook_verify_confirm(event, None)
@@ -345,13 +365,12 @@ class TestMoltbookVerifyConfirm:
 
         _, raw_key = sample_user
 
-        mock_fetch.return_value = {
-            "agent": {"name": "testbot", "is_claimed": True}
-        }
+        mock_fetch.return_value = {"agent": {"name": "testbot", "is_claimed": True}}
 
         # Initiate
         init_event = make_api_event(
-            method="POST", path="/moltbook/verify",
+            method="POST",
+            path="/moltbook/verify",
             body={"moltbook_username": "testbot"},
             api_key=raw_key,
         )
@@ -360,12 +379,14 @@ class TestMoltbookVerifyConfirm:
         # Confirm without code in description
         mock_fetch.return_value = {
             "agent": {
-                "name": "testbot", "is_claimed": True,
+                "name": "testbot",
+                "is_claimed": True,
                 "description": "No challenge here",
             }
         }
         confirm_event = make_api_event(
-            method="POST", path="/moltbook/verify/confirm",
+            method="POST",
+            path="/moltbook/verify/confirm",
             api_key=raw_key,
         )
         resp = moltbook_verify_confirm(confirm_event, None)
@@ -380,17 +401,20 @@ class TestMoltbookVerifyConfirm:
         user_id, raw_key = sample_user
 
         # Manually insert an expired challenge
-        dynamodb.put_item(Item={
-            "PK": f"USER#{user_id}",
-            "SK": "MOLTBOOK_CHALLENGE",
-            "challenge_code": "agentpier-verify-expired",
-            "moltbook_username": "testbot",
-            "created_at": "2020-01-01T00:00:00+00:00",
-            "expires_at": "0",  # Already expired
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"USER#{user_id}",
+                "SK": "MOLTBOOK_CHALLENGE",
+                "challenge_code": "agentpier-verify-expired",
+                "moltbook_username": "testbot",
+                "created_at": "2020-01-01T00:00:00+00:00",
+                "expires_at": "0",  # Already expired
+            }
+        )
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify/confirm",
+            method="POST",
+            path="/moltbook/verify/confirm",
             api_key=raw_key,
         )
         resp = moltbook_verify_confirm(event, None)
@@ -402,7 +426,8 @@ class TestMoltbookVerifyConfirm:
         from handlers.moltbook import moltbook_verify_confirm
 
         event = make_api_event(
-            method="POST", path="/moltbook/verify/confirm",
+            method="POST",
+            path="/moltbook/verify/confirm",
         )
         resp = moltbook_verify_confirm(event, None)
         assert resp["statusCode"] == 401
@@ -411,6 +436,7 @@ class TestMoltbookVerifyConfirm:
 # ---------------------------------------------------------------------------
 # 4. Handler tests: moltbook_trust (public lookup)
 # ---------------------------------------------------------------------------
+
 
 class TestMoltbookTrust:
 
@@ -429,7 +455,9 @@ class TestMoltbookTrust:
                 "following_count": 16,
                 "posts_count": 0,
                 "comments_count": 0,
-                "created_at": (datetime.now(timezone.utc) - timedelta(days=8)).isoformat(),
+                "created_at": (
+                    datetime.now(timezone.utc) - timedelta(days=8)
+                ).isoformat(),
                 "last_active": datetime.now(timezone.utc).isoformat(),
                 "is_verified": False,
                 "is_active": True,

@@ -35,17 +35,24 @@ if _tests_dir not in sys.path:
     sys.path.insert(0, _tests_dir)
 from conftest import make_api_event
 
-
 # === Helpers ===
+
 
 def _now():
     return datetime.now(timezone.utc)
 
 
-def _signal(signal_type="transaction_outcome", outcome="completed",
-            agent_id="agent-1", marketplace_id="mp_test",
-            days_ago=0, hours_ago=None, metrics=None, transaction_ref=None,
-            include_optional=True):
+def _signal(
+    signal_type="transaction_outcome",
+    outcome="completed",
+    agent_id="agent-1",
+    marketplace_id="mp_test",
+    days_ago=0,
+    hours_ago=None,
+    metrics=None,
+    transaction_ref=None,
+    include_optional=True,
+):
     """Create a test signal dict."""
     if hours_ago is not None:
         ts = (_now() - timedelta(hours=hours_ago)).isoformat()
@@ -94,6 +101,7 @@ def _profile(signal_count=0, last_signal_at=None):
 
 # === Tier Assignment Tests ===
 
+
 class TestMarketplaceTier:
     def test_registered_tier(self):
         assert get_marketplace_tier(0) == "registered"
@@ -127,6 +135,7 @@ class TestMarketplaceTier:
 
 # === Data Quality Dimension Tests ===
 
+
 class TestDataQuality:
     def test_no_signals_returns_zero(self):
         assert _score_data_quality([], []) == 0.0
@@ -141,7 +150,9 @@ class TestDataQuality:
 
     def test_incomplete_signals_lower_score(self):
         """Signals missing optional fields score lower."""
-        complete = [_signal(transaction_ref=f"tx-{i}", metrics={"r": 1}) for i in range(10)]
+        complete = [
+            _signal(transaction_ref=f"tx-{i}", metrics={"r": 1}) for i in range(10)
+        ]
         incomplete = [_signal(include_optional=False) for _ in range(10)]
         complete_score = _score_data_quality(complete, [])
         incomplete_score = _score_data_quality(incomplete, [])
@@ -159,14 +170,22 @@ class TestDataQuality:
     def test_invalid_timestamps_reduce_score(self):
         signals = [_signal() for _ in range(5)]
         # Add signals with invalid timestamps
-        bad_signals = [{"agent_id": "a", "signal_type": "transaction_outcome",
-                        "outcome": "completed", "timestamp": "not-a-date"} for _ in range(5)]
+        bad_signals = [
+            {
+                "agent_id": "a",
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+                "timestamp": "not-a-date",
+            }
+            for _ in range(5)
+        ]
         mixed_score = _score_data_quality(signals + bad_signals, [])
         good_score = _score_data_quality(signals + [_signal() for _ in range(5)], [])
         assert good_score > mixed_score
 
 
 # === Reporting Volume Dimension Tests ===
+
 
 class TestReportingVolume:
     def test_zero_signals(self):
@@ -209,6 +228,7 @@ class TestReportingVolume:
 
 # === Fairness Dimension Tests ===
 
+
 class TestFairness:
     def test_no_signals_neutral(self):
         assert _score_fairness([]) == 50.0
@@ -249,8 +269,11 @@ class TestFairness:
     def test_suspiciously_uniform_ratings_flagged(self):
         """All identical ratings = suspiciously uniform."""
         signals = [
-            _signal(signal_type="user_feedback", outcome="completed",
-                    metrics={"user_rating": 5})
+            _signal(
+                signal_type="user_feedback",
+                outcome="completed",
+                metrics={"user_rating": 5},
+            )
             for _ in range(20)
         ]
         # Add some outcome signals to make total enough
@@ -262,8 +285,11 @@ class TestFairness:
         """Normal variation in ratings should not be penalized."""
         ratings = [3, 4, 5, 4, 3, 5, 4, 2, 5, 4]
         signals = [
-            _signal(signal_type="user_feedback", outcome="completed",
-                    metrics={"user_rating": r})
+            _signal(
+                signal_type="user_feedback",
+                outcome="completed",
+                metrics={"user_rating": r},
+            )
             for r in ratings
         ]
         signals += [_signal(outcome="completed") for _ in range(5)]
@@ -273,6 +299,7 @@ class TestFairness:
 
 # === Integration Health Dimension Tests ===
 
+
 class TestIntegrationHealth:
     def test_no_signals_no_profile(self):
         score = _score_integration_health([], _profile())
@@ -281,9 +308,7 @@ class TestIntegrationHealth:
     def test_regular_cadence_high_score(self):
         """Regular submission every hour = high integration health."""
         now = _now()
-        signals = [
-            _signal(hours_ago=i) for i in range(0, 48)  # every hour for 2 days
-        ]
+        signals = [_signal(hours_ago=i) for i in range(0, 48)]  # every hour for 2 days
         score = _score_integration_health(signals, _profile(), now)
         assert score >= 60
 
@@ -322,6 +347,7 @@ class TestIntegrationHealth:
 
 # === Dispute Resolution Dimension Tests ===
 
+
 class TestDisputeResolution:
     def test_no_signals_neutral(self):
         assert _score_dispute_resolution([]) == 50.0
@@ -332,8 +358,9 @@ class TestDisputeResolution:
         assert score >= 70
 
     def test_all_disputed_no_resolution_low(self):
-        signals = [_signal(outcome="disputed", transaction_ref=f"tx-{i}")
-                   for i in range(10)]
+        signals = [
+            _signal(outcome="disputed", transaction_ref=f"tx-{i}") for i in range(10)
+        ]
         score = _score_dispute_resolution(signals)
         assert score < 50
 
@@ -342,8 +369,12 @@ class TestDisputeResolution:
         signals = []
         for i in range(5):
             # Dispute followed by resolution with same transaction_ref
-            signals.append(_signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=2))
-            signals.append(_signal(outcome="completed", transaction_ref=f"tx-{i}", days_ago=1))
+            signals.append(
+                _signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=2)
+            )
+            signals.append(
+                _signal(outcome="completed", transaction_ref=f"tx-{i}", days_ago=1)
+            )
         score = _score_dispute_resolution(signals)
         assert score >= 70
 
@@ -352,19 +383,26 @@ class TestDisputeResolution:
         signals = []
         # 3 resolved disputes
         for i in range(3):
-            signals.append(_signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=3))
-            signals.append(_signal(outcome="refunded", transaction_ref=f"tx-{i}", days_ago=1))
+            signals.append(
+                _signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=3)
+            )
+            signals.append(
+                _signal(outcome="refunded", transaction_ref=f"tx-{i}", days_ago=1)
+            )
         # 3 unresolved disputes
         for i in range(3, 6):
-            signals.append(_signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=3))
+            signals.append(
+                _signal(outcome="disputed", transaction_ref=f"tx-{i}", days_ago=3)
+            )
         score = _score_dispute_resolution(signals)
         # Should be between low (all unresolved) and high (all resolved)
         assert 35 <= score < 80
 
     def test_high_dispute_rate_penalized(self):
         """Marketplaces with very high dispute rates get penalized."""
-        signals = [_signal(outcome="disputed", transaction_ref=f"tx-{i}")
-                   for i in range(8)]
+        signals = [
+            _signal(outcome="disputed", transaction_ref=f"tx-{i}") for i in range(8)
+        ]
         signals += [_signal(outcome="completed") for _ in range(2)]
         score = _score_dispute_resolution(signals)
         # High dispute rate (80%) should bring the score down
@@ -372,6 +410,7 @@ class TestDisputeResolution:
 
 
 # === Composite Marketplace Score Tests ===
+
 
 class TestCompositeScore:
     def test_empty_marketplace(self):
@@ -411,13 +450,15 @@ class TestCompositeScore:
         now = _now()
         signals = []
         for i in range(200):
-            signals.append(_signal(
-                agent_id=f"agent-{i % 10}",
-                outcome="completed",
-                transaction_ref=f"tx-{i}",
-                metrics={"user_rating": 4 + (i % 2)},
-                hours_ago=i * 2,
-            ))
+            signals.append(
+                _signal(
+                    agent_id=f"agent-{i % 10}",
+                    outcome="completed",
+                    transaction_ref=f"tx-{i}",
+                    metrics={"user_rating": 4 + (i % 2)},
+                    hours_ago=i * 2,
+                )
+            )
         audit = [_audit_record(action="ingest") for _ in range(50)]
         profile = _profile(signal_count=200, last_signal_at=now.isoformat())
 
@@ -428,8 +469,12 @@ class TestCompositeScore:
     def test_low_quality_marketplace(self):
         """A marketplace with poor data quality."""
         signals = [
-            {"agent_id": "a", "signal_type": "transaction_outcome",
-             "outcome": "failed", "timestamp": "not-valid"}
+            {
+                "agent_id": "a",
+                "signal_type": "transaction_outcome",
+                "outcome": "failed",
+                "timestamp": "not-valid",
+            }
             for _ in range(3)
         ]
         audit = [_audit_record(action="ingest_error") for _ in range(10)]
@@ -452,8 +497,9 @@ class TestCompositeScore:
     def test_tier_matches_score_range(self):
         """Tier should correspond to the score range."""
         # Force known score scenarios
-        signals_5k = [_signal(transaction_ref=f"tx-{i}", hours_ago=i)
-                      for i in range(5000)]
+        signals_5k = [
+            _signal(transaction_ref=f"tx-{i}", hours_ago=i) for i in range(5000)
+        ]
         result = calculate_marketplace_score("mp_test", signals_5k, [], _profile())
         score = result["marketplace_score"]
         tier = result["marketplace_tier"]
@@ -471,9 +517,11 @@ class TestCompositeScore:
 
 # === Endpoint Integration Tests ===
 
+
 class TestGetMarketplaceScoreEndpoint:
     def test_marketplace_not_found(self, dynamodb):
         from handlers.marketplace import get_marketplace_score
+
         event = make_api_event(
             method="GET",
             path="/marketplace/nonexistent/score",
@@ -486,21 +534,27 @@ class TestGetMarketplaceScoreEndpoint:
         from handlers.marketplace import get_marketplace_score
 
         mp_id = "mp_score_test"
-        dynamodb.put_item(Item={
-            "PK": f"MARKETPLACE#{mp_id}",
-            "SK": "PROFILE",
-            "marketplace_id": mp_id,
-            "name": "Score Test MP",
-            "marketplace_score": Decimal("45.5"),
-            "tier": "trusted",
-            "signal_count": 100,
-            "last_scored_at": _now().isoformat(),
-            "marketplace_dimensions": json.dumps({
-                "data_quality": 60, "reporting_volume": 40,
-                "fairness": 50, "integration_health": 35,
-                "dispute_resolution": 45,
-            }),
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"MARKETPLACE#{mp_id}",
+                "SK": "PROFILE",
+                "marketplace_id": mp_id,
+                "name": "Score Test MP",
+                "marketplace_score": Decimal("45.5"),
+                "tier": "trusted",
+                "signal_count": 100,
+                "last_scored_at": _now().isoformat(),
+                "marketplace_dimensions": json.dumps(
+                    {
+                        "data_quality": 60,
+                        "reporting_volume": 40,
+                        "fairness": 50,
+                        "integration_health": 35,
+                        "dispute_resolution": 45,
+                    }
+                ),
+            }
+        )
 
         event = make_api_event(
             method="GET",
@@ -522,17 +576,19 @@ class TestGetMarketplaceScoreEndpoint:
         from handlers.marketplace import get_marketplace_score
 
         mp_id = "mp_sanitize_test"
-        dynamodb.put_item(Item={
-            "PK": f"MARKETPLACE#{mp_id}",
-            "SK": "PROFILE",
-            "marketplace_id": mp_id,
-            "name": "Sanitize Test",
-            "marketplace_score": Decimal("30"),
-            "tier": "verified",
-            "signal_count": 50,
-            "api_key_hash": "secret_hash_123",
-            "contact_email": "secret@example.com",
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"MARKETPLACE#{mp_id}",
+                "SK": "PROFILE",
+                "marketplace_id": mp_id,
+                "name": "Sanitize Test",
+                "marketplace_score": Decimal("30"),
+                "tier": "verified",
+                "signal_count": 50,
+                "api_key_hash": "secret_hash_123",
+                "contact_email": "secret@example.com",
+            }
+        )
 
         event = make_api_event(
             method="GET",
@@ -549,6 +605,7 @@ class TestGetMarketplaceScoreEndpoint:
 
     def test_missing_id(self, dynamodb):
         from handlers.marketplace import get_marketplace_score
+
         event = make_api_event(
             method="GET",
             path="/marketplace//score",
@@ -568,46 +625,52 @@ class TestRecalculateMarketplaceScoreEndpoint:
         raw_key, key_hash = generate_api_key()
         now = _now().isoformat()
 
-        dynamodb.put_item(Item={
-            "PK": f"MARKETPLACE#{mp_id}",
-            "SK": "PROFILE",
-            "GSI1PK": f"MARKETPLACE_NAME#Recalc MP",
-            "GSI1SK": "META",
-            "marketplace_id": mp_id,
-            "name": "Recalc MP",
-            "url": "https://recalc.example.com",
-            "contact_email": "admin@recalc.example.com",
-            "api_key_hash": key_hash,
-            "registered_at": now,
-            "marketplace_score": Decimal("0"),
-            "tier": "registered",
-            "signal_count": 0,
-            "last_signal_at": None,
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"MARKETPLACE#{mp_id}",
+                "SK": "PROFILE",
+                "GSI1PK": f"MARKETPLACE_NAME#Recalc MP",
+                "GSI1SK": "META",
+                "marketplace_id": mp_id,
+                "name": "Recalc MP",
+                "url": "https://recalc.example.com",
+                "contact_email": "admin@recalc.example.com",
+                "api_key_hash": key_hash,
+                "registered_at": now,
+                "marketplace_score": Decimal("0"),
+                "tier": "registered",
+                "signal_count": 0,
+                "last_signal_at": None,
+            }
+        )
 
-        dynamodb.put_item(Item={
-            "PK": f"MARKETPLACE#{mp_id}",
-            "SK": f"APIKEY#{key_hash[:16]}",
-            "GSI2PK": f"APIKEY#{key_hash}",
-            "GSI2SK": now,
-            "marketplace_id": mp_id,
-            "key_hash": key_hash,
-            "created_at": now,
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": f"MARKETPLACE#{mp_id}",
+                "SK": f"APIKEY#{key_hash[:16]}",
+                "GSI2PK": f"APIKEY#{key_hash}",
+                "GSI2SK": now,
+                "marketplace_id": mp_id,
+                "key_hash": key_hash,
+                "created_at": now,
+            }
+        )
 
         # Add some signals
         for i in range(20):
-            dynamodb.put_item(Item={
-                "PK": f"SIGNAL#{mp_id}#agent-{i % 3}",
-                "SK": f"TS#{now}#sig{i}",
-                "signal_id": f"sig{i}",
-                "marketplace_id": mp_id,
-                "agent_id": f"agent-{i % 3}",
-                "signal_type": "transaction_outcome",
-                "outcome": "completed",
-                "timestamp": now,
-                "transaction_ref": f"tx-{i}",
-            })
+            dynamodb.put_item(
+                Item={
+                    "PK": f"SIGNAL#{mp_id}#agent-{i % 3}",
+                    "SK": f"TS#{now}#sig{i}",
+                    "signal_id": f"sig{i}",
+                    "marketplace_id": mp_id,
+                    "agent_id": f"agent-{i % 3}",
+                    "signal_type": "transaction_outcome",
+                    "outcome": "completed",
+                    "timestamp": now,
+                    "transaction_ref": f"tx-{i}",
+                }
+            )
 
         return mp_id, raw_key
 
@@ -667,24 +730,29 @@ class TestRecalculateMarketplaceScoreEndpoint:
 
 # === Flywheel Integration Tests ===
 
+
 class TestFlywheelIntegration:
     def test_get_marketplace_scores_returns_scores(self, dynamodb):
         """get_marketplace_scores should fetch marketplace scores from DynamoDB."""
         from utils.ace_scoring import get_marketplace_scores
 
         # Create marketplace profiles with scores
-        dynamodb.put_item(Item={
-            "PK": "MARKETPLACE#mp_a",
-            "SK": "PROFILE",
-            "marketplace_id": "mp_a",
-            "marketplace_score": Decimal("75"),
-        })
-        dynamodb.put_item(Item={
-            "PK": "MARKETPLACE#mp_b",
-            "SK": "PROFILE",
-            "marketplace_id": "mp_b",
-            "marketplace_score": Decimal("40"),
-        })
+        dynamodb.put_item(
+            Item={
+                "PK": "MARKETPLACE#mp_a",
+                "SK": "PROFILE",
+                "marketplace_id": "mp_a",
+                "marketplace_score": Decimal("75"),
+            }
+        )
+        dynamodb.put_item(
+            Item={
+                "PK": "MARKETPLACE#mp_b",
+                "SK": "PROFILE",
+                "marketplace_id": "mp_b",
+                "marketplace_score": Decimal("40"),
+            }
+        )
 
         scores = get_marketplace_scores(["mp_a", "mp_b"])
         assert scores["mp_a"] == 75.0
@@ -699,11 +767,15 @@ class TestFlywheelIntegration:
 
     def test_get_marketplace_scores_empty_list(self, dynamodb):
         from utils.ace_scoring import get_marketplace_scores
+
         assert get_marketplace_scores([]) == {}
 
     def test_marketplace_score_affects_agent_source_weighting(self, dynamodb):
         """Higher marketplace scores should give more weight to agent scoring."""
-        from utils.ace_scoring import calculate_clearinghouse_score, _get_marketplace_weight
+        from utils.ace_scoring import (
+            calculate_clearinghouse_score,
+            _get_marketplace_weight,
+        )
 
         # Marketplace A: high score (heavy weight)
         # Marketplace B: low score (light weight)
@@ -715,21 +787,33 @@ class TestFlywheelIntegration:
 
         # Agent with failures from high-scored marketplace should be hurt more
         base_signals = [
-            {"signal_type": "transaction_outcome", "outcome": "completed",
-             "marketplace_id": "mp_neutral", "agent_id": "agent-1",
-             "timestamp": _now().isoformat()}
+            {
+                "signal_type": "transaction_outcome",
+                "outcome": "completed",
+                "marketplace_id": "mp_neutral",
+                "agent_id": "agent-1",
+                "timestamp": _now().isoformat(),
+            }
             for _ in range(20)
         ]
         failures_from_high = [
-            {"signal_type": "transaction_outcome", "outcome": "failed",
-             "marketplace_id": "mp_high", "agent_id": "agent-1",
-             "timestamp": _now().isoformat()}
+            {
+                "signal_type": "transaction_outcome",
+                "outcome": "failed",
+                "marketplace_id": "mp_high",
+                "agent_id": "agent-1",
+                "timestamp": _now().isoformat(),
+            }
             for _ in range(5)
         ]
         failures_from_low = [
-            {"signal_type": "transaction_outcome", "outcome": "failed",
-             "marketplace_id": "mp_low", "agent_id": "agent-1",
-             "timestamp": _now().isoformat()}
+            {
+                "signal_type": "transaction_outcome",
+                "outcome": "failed",
+                "marketplace_id": "mp_low",
+                "agent_id": "agent-1",
+                "timestamp": _now().isoformat(),
+            }
             for _ in range(5)
         ]
 

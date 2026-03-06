@@ -105,17 +105,19 @@ def _score_data_quality(signals: list, audit_records: list) -> float:
     agent_id_rate = (valid_agent_ids / total) * 100.0
 
     # Error rate from audit records (audit entries with action containing "error")
-    error_count = sum(1 for r in audit_records if "error" in (r.get("action") or "").lower())
+    error_count = sum(
+        1 for r in audit_records if "error" in (r.get("action") or "").lower()
+    )
     total_actions = max(len(audit_records), 1)
     error_rate = error_count / total_actions
     error_score = max(0.0, 100.0 - (error_rate * 500.0))  # 20% error = 0 score
 
     # Weighted composite: completeness 40%, timestamps 20%, agent_ids 20%, errors 20%
     score = (
-        avg_completeness * 0.40 +
-        timestamp_rate * 0.20 +
-        agent_id_rate * 0.20 +
-        error_score * 0.20
+        avg_completeness * 0.40
+        + timestamp_rate * 0.20
+        + agent_id_rate * 0.20
+        + error_score * 0.20
     )
 
     return max(0.0, min(100.0, score))
@@ -143,7 +145,9 @@ def _score_fairness(signals: list) -> float:
     if not signals:
         return 50.0  # neutral with no data
 
-    outcome_signals = [s for s in signals if s.get("signal_type") == "transaction_outcome"]
+    outcome_signals = [
+        s for s in signals if s.get("signal_type") == "transaction_outcome"
+    ]
     if len(outcome_signals) < 3:
         return 50.0  # not enough data to judge
 
@@ -220,8 +224,9 @@ def _score_fairness(signals: list) -> float:
     return max(0.0, min(100.0, score))
 
 
-def _score_integration_health(signals: list, profile: dict,
-                               now: Optional[datetime] = None) -> float:
+def _score_integration_health(
+    signals: list, profile: dict, now: Optional[datetime] = None
+) -> float:
     """Score integration health (0-100).
 
     Based on signal submission patterns:
@@ -323,10 +328,7 @@ def _score_dispute_resolution(signals: list) -> float:
     if not signals:
         return 50.0  # neutral with no data
 
-    disputed_signals = [
-        s for s in signals
-        if s.get("outcome") == "disputed"
-    ]
+    disputed_signals = [s for s in signals if s.get("outcome") == "disputed"]
 
     if not disputed_signals:
         return 70.0  # no disputes is a good sign
@@ -365,9 +367,11 @@ def _score_dispute_resolution(signals: list) -> float:
         ds_ts = ds.get("timestamp", "")
         # Look for resolution signals from same agent after this dispute
         for s in signals:
-            if (s.get("agent_id") == agent_id and
-                    s.get("outcome") in ("completed", "refunded") and
-                    (s.get("timestamp") or "") > ds_ts):
+            if (
+                s.get("agent_id") == agent_id
+                and s.get("outcome") in ("completed", "refunded")
+                and (s.get("timestamp") or "") > ds_ts
+            ):
                 unref_resolved += 1
                 break
 
@@ -392,9 +396,13 @@ def _score_dispute_resolution(signals: list) -> float:
     return max(0.0, min(100.0, score))
 
 
-def calculate_marketplace_score(marketplace_id: str, signals_submitted: list,
-                                 audit_records: list, profile: dict,
-                                 now: Optional[datetime] = None) -> dict:
+def calculate_marketplace_score(
+    marketplace_id: str,
+    signals_submitted: list,
+    audit_records: list,
+    profile: dict,
+    now: Optional[datetime] = None,
+) -> dict:
     """Score a marketplace on data quality and trustworthiness.
 
     Args:
@@ -422,11 +430,11 @@ def calculate_marketplace_score(marketplace_id: str, signals_submitted: list,
 
     # Weighted composite
     composite = (
-        data_quality * WEIGHT_DATA_QUALITY +
-        reporting_volume * WEIGHT_REPORTING_VOLUME +
-        fairness * WEIGHT_FAIRNESS +
-        integration_health * WEIGHT_INTEGRATION_HEALTH +
-        dispute_resolution * WEIGHT_DISPUTE_RESOLUTION
+        data_quality * WEIGHT_DATA_QUALITY
+        + reporting_volume * WEIGHT_REPORTING_VOLUME
+        + fairness * WEIGHT_FAIRNESS
+        + integration_health * WEIGHT_INTEGRATION_HEALTH
+        + dispute_resolution * WEIGHT_DISPUTE_RESOLUTION
     )
 
     composite = max(0.0, min(100.0, composite))

@@ -14,7 +14,11 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 
 from utils.response import success, error, not_found
-from utils.ace_scoring import calculate_ace_score, calculate_clearinghouse_score, moltbook_weight
+from utils.ace_scoring import (
+    calculate_ace_score,
+    calculate_clearinghouse_score,
+    moltbook_weight,
+)
 from utils.score_query import get_agent_signals_all_sources
 from utils.score_response import sanitize_score_response
 from utils.audit import log_signal_access
@@ -46,7 +50,8 @@ def _parse_body(event):
 def _get_agent_events(table, agent_id, limit=200):
     """Fetch trust events for an agent, most recent first."""
     response = table.query(
-        KeyConditionExpression=Key("PK").eq(f"AGENT#{agent_id}") & Key("SK").begins_with("EVENT#"),
+        KeyConditionExpression=Key("PK").eq(f"AGENT#{agent_id}")
+        & Key("SK").begins_with("EVENT#"),
         ScanIndexForward=False,
         Limit=limit,
     )
@@ -130,14 +135,17 @@ def trust_register(event, context):
         },
     )
 
-    return success({
-        "agent_id": agent_id,
-        "agent_name": agent_name,
-        "trust_score": score_data["trust_score"],
-        "trust_tier": score_data["trust_tier"],
-        "axes": score_data["axes"],
-        "registered_at": now,
-    }, status_code=201)
+    return success(
+        {
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "trust_score": score_data["trust_score"],
+            "trust_tier": score_data["trust_tier"],
+            "axes": score_data["axes"],
+            "registered_at": now,
+        },
+        status_code=201,
+    )
 
 
 # === POST /trust/agents/{agent_id}/events ===
@@ -154,7 +162,7 @@ def trust_report(event, context):
     if event_type not in valid_types:
         return error(
             f"event_type must be one of: {', '.join(sorted(valid_types))}",
-            "validation_error"
+            "validation_error",
         )
 
     table = _get_table()
@@ -185,15 +193,18 @@ def trust_report(event, context):
     # Recalculate score
     score_data = _recalculate_and_store(table, agent_id)
 
-    return success({
-        "event_id": event_id,
-        "agent_id": agent_id,
-        "event_type": event_type,
-        "trust_score": score_data["trust_score"],
-        "trust_tier": score_data["trust_tier"],
-        "axes": score_data["axes"],
-        "recorded_at": now,
-    }, status_code=201)
+    return success(
+        {
+            "event_id": event_id,
+            "agent_id": agent_id,
+            "event_type": event_type,
+            "trust_score": score_data["trust_score"],
+            "trust_tier": score_data["trust_tier"],
+            "axes": score_data["axes"],
+            "recorded_at": now,
+        },
+        status_code=201,
+    )
 
 
 # === GET /trust/agents/{agent_id} ===
@@ -214,26 +225,18 @@ def trust_query(event, context):
     # Get events (trust events for AgentPier users would be stored under USER#, not AGENT#)
     # For now, return default score since trust events system isn't fully integrated with user records
     events = []
-    
+
     # Return default trust score breakdown when no trust events exist
     trust_score = float(profile.get("trust_score", 0.0))
-    
+
     # Build default ACE score breakdown
-    default_axes = {
-        "autonomy": 0.0,
-        "competence": 0.0,  
-        "experience": 0.0
-    }
-    default_weights = {
-        "autonomy": 0.4,
-        "competence": 0.4,
-        "experience": 0.2
-    }
+    default_axes = {"autonomy": 0.0, "competence": 0.0, "experience": 0.0}
+    default_weights = {"autonomy": 0.4, "competence": 0.4, "experience": 0.2}
     default_history = {
         "total_events": 0,
         "success_events": 0,
         "failure_events": 0,
-        "safety_violations": 0
+        "safety_violations": 0,
     }
 
     # Build trust sources
@@ -252,13 +255,17 @@ def trust_query(event, context):
         # Check if Moltbook data is stale and needs refreshing
         should_refresh = False
         last_refreshed = profile.get("moltbook_last_refreshed")
-        
+
         if last_refreshed:
             try:
-                last_refresh_dt = datetime.fromisoformat(last_refreshed.replace("Z", "+00:00"))
+                last_refresh_dt = datetime.fromisoformat(
+                    last_refreshed.replace("Z", "+00:00")
+                )
                 if last_refresh_dt.tzinfo is None:
                     last_refresh_dt = last_refresh_dt.replace(tzinfo=timezone.utc)
-                hours_since_refresh = (datetime.now(timezone.utc) - last_refresh_dt).total_seconds() / 3600
+                hours_since_refresh = (
+                    datetime.now(timezone.utc) - last_refresh_dt
+                ).total_seconds() / 3600
                 should_refresh = hours_since_refresh >= MOLTBOOK_CACHE_TTL_HOURS
             except (ValueError, TypeError):
                 should_refresh = True  # Invalid timestamp, refresh
@@ -277,7 +284,7 @@ def trust_query(event, context):
             try:
                 moltbook_profile = fetch_trust_metrics(moltbook_name)
                 trust_result = calculate_trust_score(moltbook_profile)
-                
+
                 # Update cached data in DynamoDB
                 now = _now_iso()
                 table.update_item(
@@ -290,15 +297,18 @@ def trust_query(event, context):
                         ":mk": trust_result["raw"]["karma"],
                         ":mlr": now,
                         ":ts": trust_result["trust_score"] / 100,  # normalize to 0-1
-                        ":tb": {k: Decimal(str(v)) for k, v in trust_result["breakdown"].items()},
+                        ":tb": {
+                            k: Decimal(str(v))
+                            for k, v in trust_result["breakdown"].items()
+                        },
                     },
                 )
-                
+
                 # Update source data
                 moltbook_source["karma"] = trust_result["raw"]["karma"]
                 moltbook_source["age_days"] = trust_result["raw"]["age_days"]
                 moltbook_source["trust_score"] = trust_result["trust_score"]
-                
+
             except MoltbookError:
                 # Use cached data if Moltbook is unreachable (don't fail the request)
                 moltbook_source["trust_score"] = trust_score * 100
@@ -323,28 +333,31 @@ def trust_query(event, context):
             weight_moltbook = moltbook_weight(transaction_count)
             weight_agentpier = 1.0 - weight_moltbook
             combined_score = round(
-                trust_score * 100 * weight_agentpier + moltbook_source["trust_score"] * weight_moltbook,
+                trust_score * 100 * weight_agentpier
+                + moltbook_source["trust_score"] * weight_moltbook,
                 2,
             )
             combined_score = min(95.0, combined_score)
 
         sources["moltbook"] = moltbook_source
 
-    return success({
-        "agent_id": agent_id,
-        "agent_name": profile.get("username") or profile.get("agent_name", ""),
-        "description": profile.get("description", ""),
-        "capabilities": profile.get("capabilities", []),
-        "declared_scope": profile.get("declared_scope", ""),
-        "contact_url": profile.get("contact_method", {}).get("endpoint", ""),
-        "registered_at": profile.get("created_at", ""),
-        "trust_score": combined_score,
-        "trust_tier": "untrusted" if combined_score == 0.0 else "verified",
-        "axes": default_axes,
-        "weights": default_weights,
-        "history": default_history,
-        "sources": sources,
-    })
+    return success(
+        {
+            "agent_id": agent_id,
+            "agent_name": profile.get("username") or profile.get("agent_name", ""),
+            "description": profile.get("description", ""),
+            "capabilities": profile.get("capabilities", []),
+            "declared_scope": profile.get("declared_scope", ""),
+            "contact_url": profile.get("contact_method", {}).get("endpoint", ""),
+            "registered_at": profile.get("created_at", ""),
+            "trust_score": combined_score,
+            "trust_tier": "untrusted" if combined_score == 0.0 else "verified",
+            "axes": default_axes,
+            "weights": default_weights,
+            "history": default_history,
+            "sources": sources,
+        }
+    )
 
 
 # === GET /trust/agents ===
@@ -385,23 +398,27 @@ def trust_search(event, context):
         if capability and capability not in item_caps:
             continue
 
-        results.append({
-            "agent_id": item.get("agent_id", ""),
-            "agent_name": item.get("agent_name", ""),
-            "trust_score": score,
-            "trust_tier": item_tier,
-            "declared_scope": item.get("declared_scope", ""),
-            "registered_at": item.get("registered_at", ""),
-        })
+        results.append(
+            {
+                "agent_id": item.get("agent_id", ""),
+                "agent_name": item.get("agent_name", ""),
+                "trust_score": score,
+                "trust_tier": item_tier,
+                "declared_scope": item.get("declared_scope", ""),
+                "registered_at": item.get("registered_at", ""),
+            }
+        )
 
         if len(results) >= limit:
             break
 
-    return success({
-        "agents": results,
-        "count": len(results),
-        "limit": limit,
-    })
+    return success(
+        {
+            "agents": results,
+            "count": len(results),
+            "limit": limit,
+        }
+    )
 
 
 def _get_marketplace_scores(table) -> dict:
@@ -411,7 +428,8 @@ def _get_marketplace_scores(table) -> dict:
     """
     scores = {}
     scan_kwargs = {
-        "FilterExpression": Attr("SK").eq("PROFILE") & Attr("PK").begins_with("MARKETPLACE#"),
+        "FilterExpression": Attr("SK").eq("PROFILE")
+        & Attr("PK").begins_with("MARKETPLACE#"),
     }
     response = table.scan(**scan_kwargs)
     for item in response.get("Items", []):
