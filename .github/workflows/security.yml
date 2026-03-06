@@ -1,0 +1,112 @@
+name: Security Audit
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit
+
+    - name: Install SDK dependencies
+      run: |
+        cd sdk/python
+        pip install -e .
+
+    - name: Install CrewAI integration dependencies
+      run: |
+        cd integrations/crewai
+        pip install -e .
+
+    - name: Install Langchain integration dependencies
+      run: |
+        cd integrations/langchain
+        pip install -e .
+
+    - name: Run pip-audit on SDK
+      run: |
+        cd sdk/python
+        pip-audit --format=json --output=sdk-audit.json || true
+        pip-audit --desc --format=table
+
+    - name: Run pip-audit on CrewAI integration
+      run: |
+        cd integrations/crewai
+        pip-audit --format=json --output=crewai-audit.json || true
+        pip-audit --desc --format=table
+
+    - name: Run pip-audit on Langchain integration
+      run: |
+        cd integrations/langchain
+        pip-audit --format=json --output=langchain-audit.json || true
+        pip-audit --desc --format=table
+
+    - name: Check for HIGH severity vulnerabilities
+      run: |
+        # Combine all audit results and check for HIGH severity issues
+        python3 -c "
+        import json
+        import sys
+        import glob
+        
+        high_vulns = []
+        medium_vulns = []
+        
+        for audit_file in glob.glob('*/*-audit.json'):
+            try:
+                with open(audit_file, 'r') as f:
+                    data = json.load(f)
+                    if 'vulnerabilities' in data:
+                        for vuln in data['vulnerabilities']:
+                            if vuln.get('fix_versions') and any('HIGH' in str(alias) for alias in vuln.get('aliases', [])):
+                                high_vulns.append(f'{audit_file}: {vuln.get('id', 'unknown')}')
+                            elif vuln.get('fix_versions') and any('MEDIUM' in str(alias) for alias in vuln.get('aliases', [])):
+                                medium_vulns.append(f'{audit_file}: {vuln.get('id', 'unknown')}')
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
+        
+        if high_vulns:
+            print('❌ HIGH severity vulnerabilities found:')
+            for vuln in high_vulns:
+                print(f'  - {vuln}')
+            sys.exit(1)
+        
+        if medium_vulns:
+            print('⚠️  MEDIUM severity vulnerabilities found:')
+            for vuln in medium_vulns:
+                print(f'  - {vuln}')
+            print('Consider updating dependencies when possible.')
+        
+        if not high_vulns and not medium_vulns:
+            print('✅ No significant security vulnerabilities detected')
+        "
+
+    - name: Upload audit results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-audit-results-${{ matrix.python-version }}
+        path: |
+          */*-audit.json
+        retention-days: 30
