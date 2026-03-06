@@ -16,3 +16,6 @@ src/utils/content_filter_patterns.py
 src/utils/content_filter.py.production
 samconfig.toml
 samconfig.toml
+
+# SDK development environments
+sdk/python/format_env/
