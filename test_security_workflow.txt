@@ -1,0 +1,5 @@
+Security workflow test trigger
+Created: 2026-03-06 18:29 UTC
+Purpose: Validate that GitHub Actions security.yml workflow executes properly
+
+This file can be safely deleted after workflow validation is complete.
