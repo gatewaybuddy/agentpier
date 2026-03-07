@@ -85,7 +85,7 @@ The **MAP** function establishes context and identifies risks. AgentPier has mod
 | **MAP 1.1** | Intended purposes, uses, and contexts documented | Transparency | 45/100 | 🟡 **PARTIAL** - Basic API documentation, missing comprehensive context analysis |
 | **MAP 1.2** | Interdisciplinary team with diverse expertise | Fairness | 25/100 | 🔴 **MISSING** - No diversity requirements or documentation |
 | **MAP 1.3** | Organization's mission and AI goals documented | Transparency | 45/100 | 🟡 **PARTIAL** - GitHub README has mission, limited AI-specific goals |
-| **MAP 1.4** | Business value/context clearly defined | Transparency | 45/100 | 🟡 **PARTIAL** - Basic business model documented |
+| **MAP 1.4** | Business value/context clearly defined | Transparency | 45/100 | 🟡 **PARTIAL** - Basic [business model](../business-model.md) documented |
 | **MAP 1.5** | Organizational risk tolerances documented | Accountability | 52/100 | 🔴 **MISSING** - No documented risk tolerance levels |
 | **MAP 1.6** | System requirements understood by AI actors | Transparency | 45/100 | 🟡 **PARTIAL** - Technical requirements documented, socio-technical implications missing |
 

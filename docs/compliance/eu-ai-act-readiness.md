@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive readiness checklist for EU AI Act compliance, specifically mapped to AgentPier's trust scoring dimensions. The EU AI Act becomes fully applicable on **August 2, 2026**, requiring all in-scope AI systems to comply with classification and documentation requirements.
+This document provides a comprehensive readiness checklist for EU AI Act compliance, specifically mapped to AgentPier's trust scoring dimensions. See also [regulatory timeline](./regulatory-timeline.md) for critical deadlines and [NIST AI RMF mapping](./nist-ai-rmf-mapping.md) for framework alignment. The EU AI Act becomes fully applicable on **August 2, 2026**, requiring all in-scope AI systems to comply with classification and documentation requirements.
 
 **Key Findings:**
 - **AgentPier marketplaces** may deploy high-risk AI systems requiring full compliance

@@ -3,11 +3,11 @@
 **Document Version:** 1.0  
 **Effective Date:** March 4, 2026  
 **Package Launch:** Q2 2026  
-**Market Research Based On:** Current compliance market analysis and AgentPier self-assessment (Score: 57.6/100)
+**Market Research Based On:** Current compliance market analysis and AgentPier self-assessment (Score: 57.6/100) - see [ISO 42001 mapping](./iso-42001-mapping.md) for detailed assessment
 
 ## Executive Summary
 
-AgentPier compliance packages transform our trust scoring platform into a comprehensive compliance-as-a-service offering. These packages address the growing need for AI compliance across EU AI Act, NIST AI RMF, ISO standards, and industry-specific regulations.
+AgentPier compliance packages transform our [trust scoring platform](../business-model.md) into a comprehensive compliance-as-a-service offering. These packages address the growing need for AI compliance across EU AI Act, NIST AI RMF, ISO standards, and industry-specific regulations.
 
 **Market Opportunity:**
 - **Total Addressable Market (TAM):** $2.4B AI compliance market by 2027
@@ -527,7 +527,7 @@ AgentPier compliance packages transform our trust scoring platform into a compre
 - [ ] **Technology Partnerships** - Integration with GRC platforms
 
 ### Q2-Q4 2027: Growth & Innovation
-- [ ] **API Platform** - Developer API for compliance integration
+- [ ] **API Platform** - Developer API for compliance integration (reference current [API documentation](../api-reference.md))
 - [ ] **AI-Powered Insights** - Machine learning for compliance optimization
 - [ ] **Certification Services** - Official certification and audit services
 - [ ] **Global Expansion** - APAC and other market entry
@@ -621,7 +621,7 @@ AgentPier compliance packages transform our trust scoring platform into a compre
 4. **Competitive Analysis** - Detailed analysis of competitor offerings and positioning
 
 ### Week 3-4: Foundation Development  
-1. **Technical Architecture** - Design platform architecture for multi-package delivery
+1. **Technical Architecture** - Design platform architecture for multi-package delivery (see [system architecture](../architecture.md) for current platform design)
 2. **Content Development** - Begin creating assessment frameworks and templates
 3. **Legal Framework** - Develop service terms, SLAs, and compliance disclaimers
 4. **Partnership Strategy** - Identify and approach potential consulting firm partners

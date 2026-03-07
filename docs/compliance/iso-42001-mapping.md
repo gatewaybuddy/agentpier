@@ -54,7 +54,7 @@ Required Documentation:
 
 **AgentPier Mapping:**
 - **Related Dimensions:** Transparency (45/100), Accountability (52/100)
-- **Evidence:** GitHub documentation, business model clarity
+- **Evidence:** GitHub documentation, [business model clarity](../business-model.md)
 - **Gaps:** Comprehensive stakeholder analysis, environmental scanning
 
 #### 4.2 Understanding the Needs and Expectations of Interested Parties
