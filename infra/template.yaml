@@ -906,6 +906,95 @@ Resources:
             Method: GET
 
   # ============================================
+  # V-Token (Verification Token) API
+  # ============================================
+
+  CreateVTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-create-vtoken-${Stage}
+      Handler: handlers.vtokens.create_vtoken
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /vtokens
+            Method: POST
+
+  VerifyVTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-verify-vtoken-${Stage}
+      Handler: handlers.vtokens.verify_vtoken
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /vtokens/{token}/verify
+            Method: GET
+
+  ClaimVTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-claim-vtoken-${Stage}
+      Handler: handlers.vtokens.claim_vtoken
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /vtokens/{token}/claim
+            Method: POST
+
+  ListVTokensFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-list-vtokens-${Stage}
+      Handler: handlers.vtokens.list_vtokens
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /vtokens
+            Method: GET
+
+  GetVTokenClaimsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-vtoken-claims-${Stage}
+      Handler: handlers.vtokens.get_vtoken_claims
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /vtokens/{token}/claims
+            Method: GET
+
+  # ============================================
   # Certification Standards API (Issue #46)
   # ============================================
 

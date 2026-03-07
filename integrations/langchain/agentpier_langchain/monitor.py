@@ -6,6 +6,9 @@ High-level monitoring utilities for LangChain workflows.
 
 import requests
 from typing import Any, Dict, List, Optional, Union
+from agentpier import AgentPier
+from agentpier.vtokens import VTokenMethods
+from agentpier.exceptions import AgentPierError
 from .callbacks import AgentPierCallback
 
 
@@ -51,6 +54,7 @@ class ChainMonitor:
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.headers = {"X-API-Key": self.api_key}
+        self._sdk = AgentPier(api_key=api_key, base_url=base_url)
 
     def get_callback(self) -> AgentPierCallback:
         """Get the callback instance to add to LangChain chains."""
@@ -199,6 +203,118 @@ class ChainMonitor:
         return self.callback._report_trust_event(
             agent_id, event_type, outcome, details, metadata
         )
+
+    def verify_vtoken(
+        self, token: str, min_score: float = 60.0
+    ) -> Dict[str, Any]:
+        """
+        Verify a v-token before executing a chain.
+
+        Use this to verify a counterparty's identity before starting work.
+        No authentication is required for verification.
+
+        Args:
+            token: V-token string to verify
+            min_score: Minimum trust score to accept
+
+        Returns:
+            Dict with verification result and trust data
+        """
+        try:
+            result = VTokenMethods.verify(token, base_url=self.base_url)
+
+            if not result.valid:
+                return {
+                    "verified": False,
+                    "reason": result.reason or "Token is invalid",
+                }
+
+            verified = result.issuer.trust_score >= min_score
+
+            return {
+                "verified": verified,
+                "agent_id": result.issuer.agent_id,
+                "agent_name": result.issuer.agent_name,
+                "trust_score": result.issuer.trust_score,
+                "trust_tier": result.issuer.trust_tier,
+                "purpose": result.purpose,
+                "min_score": min_score,
+                "reason": (
+                    "V-token verified, meets minimum trust"
+                    if verified
+                    else f"Score {result.issuer.trust_score:.1f} below minimum {min_score}"
+                ),
+            }
+
+        except Exception as e:
+            return {
+                "verified": False,
+                "reason": f"Error verifying v-token: {str(e)}",
+            }
+
+    def verify_and_claim_vtoken(
+        self, token: str, min_score: float = 60.0, notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Verify a v-token and claim it if valid, completing mutual verification.
+
+        Combines verification and claiming into a single call for convenience.
+
+        Args:
+            token: V-token string to verify and claim
+            min_score: Minimum trust score to accept
+            notes: Optional notes for the claim
+
+        Returns:
+            Dict with verification status, claim result, and both parties' trust data
+        """
+        # First verify
+        verification = self.verify_vtoken(token, min_score)
+        if not verification.get("verified"):
+            return verification
+
+        # Then claim
+        try:
+            claim = self._sdk.vtokens.claim(token, notes=notes)
+
+            if not claim.claimed:
+                return {
+                    "verified": True,
+                    "claimed": False,
+                    "reason": claim.reason or "Claim failed",
+                }
+
+            return {
+                "verified": True,
+                "claimed": True,
+                "mutual_verification": claim.mutual_verification,
+                "issuer": {
+                    "agent_id": claim.issuer.agent_id,
+                    "agent_name": claim.issuer.agent_name,
+                    "trust_score": claim.issuer.trust_score,
+                    "trust_tier": claim.issuer.trust_tier,
+                },
+                "claimant": {
+                    "agent_id": claim.claimant.agent_id,
+                    "agent_name": claim.claimant.agent_name,
+                    "trust_score": claim.claimant.trust_score,
+                    "trust_tier": claim.claimant.trust_tier,
+                },
+                "reason": "Mutual verification established",
+            }
+
+        except AgentPierError as e:
+            return {
+                "verified": True,
+                "claimed": False,
+                "reason": f"Claim error: {str(e)}",
+            }
+        except Exception as e:
+            return {
+                "verified": True,
+                "claimed": False,
+                "reason": f"Error claiming v-token: {str(e)}",
+            }
 
     def get_trust_summary(self, agent_ids: List[str]) -> Dict[str, Any]:
         """

@@ -12,6 +12,7 @@ from .badges import BadgeMethods
 from .standards import StandardsMethods
 from .marketplace import MarketplaceMethods
 from .listings import ListingMethods
+from .vtokens import VTokenMethods
 from .types import *
 from .exceptions import *
 
@@ -89,6 +90,7 @@ class AgentPier:
         self.standards = StandardsMethods(self._client)
         self.marketplace = MarketplaceMethods(self._client)
         self.listings = ListingMethods(self._client)
+        self.vtokens = VTokenMethods(self._client)
 
     def set_api_key(self, api_key: str) -> None:
         """
@@ -122,6 +124,20 @@ class AgentPier:
             return True
         except:
             return False
+
+    @staticmethod
+    def verify_vtoken(token: str, base_url: str = None) -> "VTokenVerification":
+        """
+        Verify a v-token without authentication (convenience static method).
+
+        Args:
+            token: The v-token string to verify
+            base_url: Optional API base URL
+
+        Returns:
+            VTokenVerification with validity and issuer trust data
+        """
+        return VTokenMethods.verify(token, base_url=base_url)
 
     def version_info(self) -> dict:
         """
@@ -165,6 +181,7 @@ __all__ = [
     "StandardsMethods",
     "MarketplaceMethods",
     "ListingMethods",
+    "VTokenMethods",
     # Core client
     "AgentPierClient",
     # Types
@@ -186,6 +203,13 @@ __all__ = [
     "RegistrationResult",
     "LoginResult",
     "APIKeyRotation",
+    # V-Token types
+    "VToken",
+    "VTokenVerification",
+    "VTokenClaim",
+    "VTokenClaimant",
+    "VTokenIssuer",
+    "VTokenListing",
     # Exceptions
     "AgentPierError",
     "AuthenticationError",

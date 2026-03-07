@@ -286,3 +286,82 @@ class APIKeyRotation:
     user_id: str
     api_key: str
     message: Optional[str] = None
+
+
+# --- V-Token Types ---
+
+
+@dataclass
+class VTokenIssuer:
+    """Issuer identity returned from v-token verification."""
+
+    agent_id: str
+    agent_name: str
+    trust_tier: str
+    trust_score: float
+    confidence: Optional[float] = None
+    registered_at: Optional[datetime] = None
+
+
+@dataclass
+class VTokenListing:
+    """Listing data attached to a v-token."""
+
+    listing_id: str
+    title: Optional[str] = None
+    category: Optional[str] = None
+
+
+@dataclass
+class VToken:
+    """Represents a verification token."""
+
+    token: str
+    issuer_id: str
+    purpose: str
+    created_at: str
+    expires_at: str
+    verify_url: str
+    status: str
+    listing_id: Optional[str] = None
+
+
+@dataclass
+class VTokenVerification:
+    """Result of verifying a v-token."""
+
+    valid: bool
+    reason: Optional[str] = None
+    issuer: Optional[VTokenIssuer] = None
+    purpose: Optional[str] = None
+    listing: Optional[VTokenListing] = None
+    created_at: Optional[str] = None
+    expires_at: Optional[str] = None
+    claims_count: Optional[int] = None
+    signature: Optional[str] = None
+    signature_algorithm: Optional[str] = None
+    signed_fields: Optional[str] = None
+
+
+@dataclass
+class VTokenClaimant:
+    """A single claimant of a v-token."""
+
+    claimant_id: str
+    claimant_name: str
+    trust_tier: str
+    trust_score: float
+    claimed_at: str
+
+
+@dataclass
+class VTokenClaim:
+    """Result of claiming a v-token."""
+
+    claimed: bool
+    token: Optional[str] = None
+    reason: Optional[str] = None
+    issuer: Optional[VTokenIssuer] = None
+    claimant: Optional[VTokenIssuer] = None
+    mutual_verification: Optional[bool] = None
+    claimed_at: Optional[str] = None

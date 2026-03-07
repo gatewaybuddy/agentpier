@@ -5,6 +5,7 @@ High-level classes for monitoring CrewAI workflows and verifying trust levels.
 """
 
 from agentpier import AgentPier
+from agentpier.vtokens import VTokenMethods
 from agentpier.exceptions import NotFoundError, AuthenticationError, AgentPierError
 from typing import List, Any, Dict, Optional
 from .callbacks import AgentPierTaskCallback
@@ -239,3 +240,112 @@ class TrustVerifier:
             return False
 
         return result.get("all_verified", False)
+
+    def verify_vtoken(self, token: str) -> Dict[str, Any]:
+        """
+        Verify a v-token before executing a crew workflow.
+
+        Use this to verify a counterparty's identity before starting work.
+        No authentication is required for verification.
+
+        Args:
+            token: V-token string to verify
+
+        Returns:
+            Dict with verification result and trust data
+        """
+        try:
+            result = VTokenMethods.verify(token)
+
+            if not result.valid:
+                return {
+                    "verified": False,
+                    "reason": result.reason or "Token is invalid",
+                }
+
+            verified = result.issuer.trust_score >= self.min_score
+
+            return {
+                "verified": verified,
+                "agent_id": result.issuer.agent_id,
+                "agent_name": result.issuer.agent_name,
+                "trust_score": result.issuer.trust_score,
+                "trust_tier": result.issuer.trust_tier,
+                "purpose": result.purpose,
+                "min_score": self.min_score,
+                "reason": (
+                    "V-token verified, meets minimum trust"
+                    if verified
+                    else f"Score {result.issuer.trust_score:.1f} below minimum {self.min_score}"
+                ),
+            }
+
+        except Exception as e:
+            return {
+                "verified": False,
+                "reason": f"Error verifying v-token: {str(e)}",
+            }
+
+    def verify_and_claim_vtoken(
+        self, token: str, notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Verify a v-token and claim it if valid, completing mutual verification.
+
+        Combines verification and claiming into a single call. Use this before
+        executing a crew workflow to establish mutual trust with the counterparty.
+
+        Args:
+            token: V-token string to verify and claim
+            notes: Optional notes for the claim
+
+        Returns:
+            Dict with verification status, claim result, and both parties' trust data
+        """
+        # First verify
+        verification = self.verify_vtoken(token)
+        if not verification.get("verified"):
+            return verification
+
+        # Then claim
+        try:
+            claim = self.client.vtokens.claim(token, notes=notes)
+
+            if not claim.claimed:
+                return {
+                    "verified": True,
+                    "claimed": False,
+                    "reason": claim.reason or "Claim failed",
+                }
+
+            return {
+                "verified": True,
+                "claimed": True,
+                "mutual_verification": claim.mutual_verification,
+                "issuer": {
+                    "agent_id": claim.issuer.agent_id,
+                    "agent_name": claim.issuer.agent_name,
+                    "trust_score": claim.issuer.trust_score,
+                    "trust_tier": claim.issuer.trust_tier,
+                },
+                "claimant": {
+                    "agent_id": claim.claimant.agent_id,
+                    "agent_name": claim.claimant.agent_name,
+                    "trust_score": claim.claimant.trust_score,
+                    "trust_tier": claim.claimant.trust_tier,
+                },
+                "reason": "Mutual verification established",
+            }
+
+        except AgentPierError as e:
+            return {
+                "verified": True,
+                "claimed": False,
+                "reason": f"Claim error: {str(e)}",
+            }
+        except Exception as e:
+            return {
+                "verified": True,
+                "claimed": False,
+                "reason": f"Error claiming v-token: {str(e)}",
+            }

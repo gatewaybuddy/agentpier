@@ -1,238 +1,329 @@
-# AgentPier Business Model - March 2026
+# AgentPier Business Model v2 — Trust Infrastructure Economics
 
-**Executive Summary**: AgentPier captures the $2-5B trust infrastructure opportunity in AI agent marketplaces through a hybrid model combining freemium API access, enterprise platform licensing, and marketplace revenue sharing. Conservative Year 3 target: $12M ARR.
-
----
-
-## 1. Revenue Streams (Ranked by Feasibility & Timeline)
-
-### Tier 1: Immediate Revenue (Q2-Q3 2026)
-**1. Enterprise API Subscriptions - $1,200/month**
-- **Target**: Marketplace platforms (Zapier, CrewAI, HuggingFace)
-- **Value Prop**: White-label trust infrastructure, custom integration support
-- **Timeline**: 90-day sales cycle, first contracts by Q2 2026
-- **Feasibility**: 95% - existing API + demonstrated demand
-
-**2. Trust Analytics Dashboards - $500/month** 
-- **Target**: Agent developers with >100 listings
-- **Value Prop**: Performance insights, trust optimization recommendations
-- **Timeline**: 30-day sales cycle, revenue by Q2 2026
-- **Feasibility**: 90% - extension of existing trust scoring
-
-### Tier 2: Growth Revenue (Q4 2026 - Q2 2027)
-**3. Marketplace Revenue Share - 1.5% of transaction value**
-- **Target**: Platforms processing agent transactions (Salesforce AgentForce)
-- **Value Prop**: Transaction-linked trust scoring, fraud prevention
-- **Timeline**: 6-month integration cycle
-- **Feasibility**: 80% - requires transaction platform partnerships
-
-**4. Verification Services - $2,500/agent certification**
-- **Target**: High-value enterprise agents, critical infrastructure bots
-- **Value Prop**: Manual audit + certification for mission-critical deployments
-- **Timeline**: Available Q4 2026 with expert hiring
-- **Feasibility**: 75% - requires specialized workforce
-
-### Tier 3: Scale Revenue (2027-2028)
-**5. Trust Insurance Products - 0.3% of agent transaction value**
-- **Target**: Enterprise buyers purchasing high-value agent services
-- **Value Prop**: Coverage for agent failures, guaranteed performance SLAs
-- **Timeline**: 18-month product development + regulatory approval
-- **Feasibility**: 60% - requires insurance partnerships, regulatory navigation
+**Date:** March 6, 2026
+**Authors:** Rado, Kael
 
 ---
 
-## 2. Pricing Tiers & Features
+## Strategic Shift: From Subscriptions to Verification Volume
 
-### Free Tier - $0/month
-**Target**: Individual developers, open source projects
-- ✅ Basic trust scoring API (1,000 calls/month)
-- ✅ Trust badge integration
-- ✅ Community support
-- ❌ No analytics dashboard
-- ❌ No custom integration support
-- **Purpose**: Ecosystem adoption, developer acquisition
+**v1 model:** Subscription tiers ($199/mo Professional, $1,200/mo Enterprise)
+**v2 model:** Per-verification pricing + platform tiers
 
-### Professional - $199/month 
-**Target**: Agent development studios, small platforms
-- ✅ Advanced trust scoring API (25,000 calls/month)
-- ✅ Analytics dashboard with 90-day history
-- ✅ Priority email support
-- ✅ Custom badge styling
-- ✅ Basic integration consulting (2 hours/month)
-- **Key Value**: Professional trust infrastructure for growing businesses
-
-### Enterprise - $1,200/month
-**Target**: Marketplace platforms, Fortune 500 implementations
-- ✅ Unlimited API calls
-- ✅ Advanced analytics with 2-year history
-- ✅ White-label trust infrastructure
-- ✅ Custom trust scoring models
-- ✅ 24/7 phone support + dedicated customer success manager
-- ✅ Custom integration development (20 hours/month included)
-- ✅ SLA guarantees (99.9% uptime)
-- **Key Value**: Complete trust platform with custom development
-
-### Marketplace Partnership - Revenue Share
-**Target**: Large transaction-processing platforms
-- ✅ All Enterprise features
-- ✅ Deep transaction integration
-- ✅ 1.5% revenue share on trust-scored transactions
-- ✅ Co-marketing support
-- ✅ Joint go-to-market strategy
-- **Key Value**: Risk-free adoption with performance-based pricing
+**Why the shift:**
+1. Subscriptions create sales friction (monthly commitment, procurement approval)
+2. Per-verification aligns cost with value (pay only when trust is actually checked)
+3. Volume-based pricing scales naturally with the agent economy
+4. Acquisition-attractive metric (verification volume = network usage = clear growth indicator)
+5. Stripe, Twilio, and SendGrid all proved per-transaction pricing builds infrastructure companies faster than subscriptions
 
 ---
 
-## 3. Unit Economics Analysis
+## 1. Pricing Structure
 
-### Cost to Serve One Marketplace Integration
+### Free Tier — $0
 
-**Technology Costs:**
-- AWS infrastructure (API Gateway + Lambda + DynamoDB): $45/month
-- Moltbook API costs (verification calls): $15/month
-- CDN/security (Cloudflare): $8/month
-- **Total Tech**: $68/month per integration
+| Feature | Limit |
+|---------|-------|
+| Trust score lookups | 1,000/month |
+| V-token creation | 100/month |
+| V-token verification | 1,000/month |
+| Agent registrations | 10 agents |
+| Badge API | Unlimited (public) |
+| SDK access | Full |
+| Support | Community (GitHub Issues) |
 
-**Personnel Costs (allocated):**
-- Customer success manager (20% allocation): $300/month
-- Integration engineer support (10% allocation): $200/month
-- Trust algorithm maintenance (5% allocation): $125/month
-- **Total Personnel**: $625/month per integration
+**Purpose:** Developer adoption, framework integration testing, individual agent operators. Generous enough for real use, constrained enough that platforms outgrow it.
 
-**Total Cost to Serve**: $693/month per Enterprise client
-**Enterprise Price**: $1,200/month
-**Gross Margin**: 42% per Enterprise client
+### Platform Tier — $0.005 per verification
 
-**Professional Tier Economics:**
-- Tech costs: $12/month (lower volume)
-- Minimal personnel allocation: $50/month
-- Total cost: $62/month
-- Price: $199/month
-- **Gross Margin**: 69% per Professional client
+Kicks in when free limits are exceeded. No contract required.
 
-**Key Insight**: Enterprise clients subsidize ecosystem growth through higher margins on Professional/Free tiers.
+| Feature | Included |
+|---------|----------|
+| Trust score lookups | Unlimited |
+| V-token creation | Unlimited |
+| V-token verification | Unlimited |
+| Agent registrations | Unlimited |
+| Batch score API (`/scores/batch`) | Yes |
+| Custom badge styling | Yes |
+| Webhook notifications | Yes |
+| SLA | 99.5% uptime |
+| Support | Email, 48-hour response |
 
----
+**"Verification" defined as:** Any API call that checks, creates, or claims a v-token, or looks up a trust score. Badge renders (SVG) are free and uncounted.
 
-## 4. Revenue Projections (3-Year Forecast)
+**Volume discounts:**
 
-### Year 1 (2026): Foundation - $480K ARR
+| Monthly Volume | Price per Verification |
+|----------------|----------------------|
+| 0 - 1,000 | Free |
+| 1,001 - 100,000 | $0.005 |
+| 100,001 - 500,000 | $0.004 |
+| 500,001 - 1,000,000 | $0.003 |
+| 1,000,001+ | $0.002 |
 
-**Q2 2026:**
-- 2 Enterprise clients × $1,200/month × 6 months = $14,400
-- 8 Professional clients × $199/month × 6 months = $9,552
-- **Q2 Total**: $23,952
+### Enterprise Tier — Custom pricing (starts at $0.003/verification)
 
-**Q4 2026:**
-- 6 Enterprise clients × $1,200/month × 12 months = $86,400
-- 25 Professional clients × $199/month × 12 months = $59,700
-- 2 Verification projects × $2,500 = $5,000
-- **Year 1 Total**: $151,100
-
-### Year 2 (2027): Growth - $2.8M ARR
-
-**Conservative Scenario:**
-- 18 Enterprise clients × $1,200/month = $259,200/year
-- 120 Professional clients × $199/month = $286,800/year  
-- 1 Marketplace partner at 1.5% share (estimated $800K transaction volume) = $12,000/year
-- 24 Verification projects × $2,500 = $60,000/year
-- **Year 2 Total**: $618,000
-
-**Moderate Scenario:**
-- 35 Enterprise clients × $1,200/month = $504,000/year
-- 280 Professional clients × $199/month = $668,160/year
-- 3 Marketplace partners (estimated $2.5M transaction volume) = $37,500/year
-- 48 Verification projects × $2,500 = $120,000/year
-- **Year 2 Total**: $1,329,660
-
-**Aggressive Scenario:**
-- 55 Enterprise clients × $1,200/month = $792,000/year
-- 450 Professional clients × $199/month = $1,074,600/year
-- 5 Marketplace partners (estimated $4.2M transaction volume) = $63,000/year
-- 80 Verification projects × $2,500 = $200,000/year
-- **Year 2 Total**: $2,129,600
-
-### Year 3 (2028): Scale - $12M ARR (Moderate Scenario)
-
-- 75 Enterprise clients × $1,200/month = $1,080,000/year
-- 800 Professional clients × $199/month = $1,912,800/year  
-- 8 Marketplace partners (estimated $18M transaction volume) = $270,000/year
-- 120 Verification projects × $2,500 = $300,000/year
-- Trust Insurance pilot (5% of transaction volume) = $900,000/year
-- **Year 3 Total**: $4,462,800
-
-**Target Range**: $4.5M - $12M ARR by end of Year 3
+| Feature | Included |
+|---------|----------|
+| Everything in Platform | Yes |
+| Custom trust scoring models | Yes (weighted dimensions, custom signals) |
+| Dedicated account support | Yes |
+| SLA | 99.9% uptime, <100ms p95 latency |
+| Private deployment option | Yes (your AWS, your data) |
+| Compliance reporting | EU AI Act, NIST AI RMF, ISO 42001 |
+| Audit trails | Extended retention (1 year vs. 7 days) |
+| Support | Dedicated Slack channel, 4-hour response |
+| Minimum commit | $500/month |
 
 ---
 
-## 5. Moat Strategy: Staying Ahead of In-House Development
+## 2. Revenue Projections
 
-### Network Effects Moat (Primary Defense)
-**Strategy**: Build cross-platform reputation that becomes more valuable with adoption
-- **Implementation**: Agent trust scores improve across ALL platforms when agents gain experience on ANY platform
-- **Defense**: Once 5+ major platforms integrate, in-house solutions fragment the network
-- **Timeline**: Achieve critical mass (20+ marketplace integrations) within 18 months
+### Scenario A: Framework-Driven Adoption (Conservative)
 
-### Data Moat (Secondary Defense)  
-**Strategy**: Accumulate behavioral trust data that's impossible to replicate quickly
-- **Implementation**: Track millions of agent interactions, performance patterns, failure modes
-- **Defense**: New entrants start with zero baseline data, can't match trust accuracy
-- **Timeline**: Requires 2+ years of interaction data to build significant advantage
+Assumes ATIP is adopted primarily through CrewAI/LangChain/AutoGen integrations, with 2-3 platforms integrating by Month 6.
 
-### Standards Moat (Strategic Defense)
-**Strategy**: Establish AgentPier methodology as the industry standard for agent trust
-- **Implementation**: Open-source core algorithms, publish academic research, drive regulatory adoption
-- **Defense**: Platforms that build in-house face "not invented here" resistance from buyers
-- **Timeline**: Submit to IEEE standards committee by Q4 2026
+| Month | Platforms | Agents Registered | Monthly Verifications | MRR |
+|-------|-----------|-------------------|----------------------|-----|
+| 1 | 0 | 25 | 500 | $0 (free tier) |
+| 2 | 1 | 100 | 5,000 | $20 |
+| 3 | 2 | 250 | 25,000 | $120 |
+| 4 | 3 | 500 | 75,000 | $370 |
+| 5 | 4 | 1,000 | 200,000 | $950 |
+| 6 | 5 | 2,000 | 500,000 | $2,200 |
+| **Year 1** | **8** | **5,000** | **1,500,000** | **$5,500** |
 
-### Developer Ecosystem Moat
-**Strategy**: Build integrations, tools, and community that creates switching costs
-- **Implementation**: MCP protocol integration, agent development SDKs, trust optimization tooling
-- **Defense**: Moving to in-house solution breaks existing developer workflows
-- **Timeline**: 100+ community integrations within 2 years
+**Year 1 total revenue:** ~$30K
+**Year 1 ARR run rate:** ~$66K
 
-### Speed Moat (First-Mover Advantage)
-**Strategy**: Move faster than platform development cycles
-- **Implementation**: Release major features every 90 days, stay 12-18 months ahead
-- **Defense**: By the time platforms catch up, we've captured enough market share for network effects
-- **Timeline**: Maintain feature velocity for 24 months minimum
+### Scenario B: Platform Partnership Acceleration (Moderate)
 
----
+Assumes 1 platform partner hits significant volume by Month 4, plus framework-driven organic growth.
 
-## 6. Final Business Model Recommendation: Hybrid Freemium
+| Month | Platforms | Agents Registered | Monthly Verifications | MRR |
+|-------|-----------|-------------------|----------------------|-----|
+| 1 | 0 | 50 | 1,000 | $0 |
+| 2 | 2 | 200 | 15,000 | $70 |
+| 3 | 3 | 500 | 75,000 | $370 |
+| 4 | 5 | 1,500 | 300,000 | $1,400 |
+| 5 | 7 | 3,000 | 600,000 | $2,700 |
+| 6 | 10 | 5,000 | 1,200,000 | $5,000 |
+| **Year 1** | **15** | **15,000** | **5,000,000** | **$16,000** |
 
-### Decision: **Freemium API + Enterprise Platform + Marketplace Rev-Share**
+**Year 1 total revenue:** ~$80K
+**Year 1 ARR run rate:** ~$192K
 
-**Rationale**: 
-1. **Market Development**: Freemium drives adoption in fragmented ecosystem
-2. **Revenue Optimization**: Enterprise subscriptions provide predictable revenue  
-3. **Scale Capture**: Revenue sharing aligns with largest marketplace platforms
-4. **Moat Building**: Hybrid model accelerates network effects while funding growth
+### Scenario C: Enterprise Anchor (Optimistic)
 
-### Implementation Priority:
-1. **Month 1-3**: Launch Professional tier at $199/month, target agent developers
-2. **Month 4-6**: Sign first 3 Enterprise clients at $1,200/month 
-3. **Month 7-12**: Negotiate first marketplace revenue-sharing deal
-4. **Year 2**: Scale enterprise sales, add verification services
-5. **Year 3**: Launch trust insurance, capture scale economics
+Assumes 1 enterprise deal ($500/mo minimum) by Month 4, plus organic growth.
 
-### Key Success Metrics:
-- **12 months**: 25 paying customers, $300K ARR
-- **24 months**: 200 paying customers, $2M ARR, 1 marketplace partner
-- **36 months**: 800 paying customers, $8M ARR, 5 marketplace partners
+| Month | Platforms | Enterprise Deals | Monthly Verifications | MRR |
+|-------|-----------|-----------------|----------------------|-----|
+| 1 | 0 | 0 | 500 | $0 |
+| 2 | 2 | 0 | 10,000 | $45 |
+| 3 | 3 | 0 | 50,000 | $245 |
+| 4 | 5 | 1 | 300,000 | $1,900 |
+| 5 | 7 | 1 | 800,000 | $4,100 |
+| 6 | 10 | 2 | 1,500,000 | $7,500 |
+| **Year 1** | **20** | **3** | **8,000,000** | **$25,000** |
 
-### Why NOT Enterprise-Only:
-- Limits ecosystem adoption in fragmented market
-- Misses developer community that drives platform selection
-- Competitors can undercut with freemium offerings
-
-### Why NOT Pure Rev-Share:
-- Long sales cycles delay revenue 
-- Platforms reluctant to share transaction data early
-- Need sustainable revenue during network effects buildup
-
-**Final Recommendation**: The hybrid model maximizes both immediate revenue and long-term moat development, with clear upgrade paths that align customer success with our revenue growth.
+**Year 1 total revenue:** ~$150K
+**Year 1 ARR run rate:** ~$300K
 
 ---
 
-*Business Model Document - AgentPier March 2026*
+## 3. Unit Economics
+
+### Cost to serve one verification
+
+| Component | Cost per verification |
+|-----------|-----------------------|
+| AWS Lambda invocation | $0.0000002 (128MB, 100ms avg) |
+| API Gateway request | $0.0000035 |
+| DynamoDB read (1 RCU) | $0.00000025 |
+| DynamoDB write (v-token creation) | $0.00000125 |
+| Bandwidth (1KB avg response) | $0.00000009 |
+| **Total per verification** | **~$0.000005** |
+
+**Gross margin at $0.005/verification: 99.9%**
+
+Infrastructure costs are negligible at current scale. At 10M verifications/month, total AWS cost would be ~$50/month. The real cost is engineering time, not infrastructure.
+
+### Cost structure (monthly)
+
+| Category | Cost | Notes |
+|----------|------|-------|
+| AWS infrastructure | $15-50 | Lambda + DynamoDB + API Gateway |
+| Domain / DNS | $5 | Route 53 |
+| Monitoring | $0 | CloudWatch free tier |
+| Engineering (Rado's time) | $0 (founder equity) | |
+| Agent constellation (AI tools) | $100-200 | Claude, API costs for development |
+| **Total monthly burn** | **~$150-250** | |
+
+**Breakeven:** ~30,000 verifications/month at $0.005/each = $150/month. Achievable by Month 2-3.
+
+---
+
+## 4. Moat Strategy
+
+### Network Effects (Primary Moat)
+
+```
+More platforms → more agents registered → richer trust data
+→ more accurate scores → more platforms want to integrate
+```
+
+**Critical mass threshold:** 10+ platforms, 5,000+ agents, 1M+ monthly verifications. At this point, building an alternative from scratch can't match our data quality.
+
+**Timeline to critical mass:** 12-18 months.
+
+### Data Moat (Secondary)
+
+Cross-platform trust data is inherently proprietary. Even if someone copies ATIP (it's open), they can't copy:
+- Historical verification patterns
+- Trust score evolution data
+- Cross-platform reputation signals
+- Fraud and impersonation attempt data
+
+### Protocol Moat (Strategic)
+
+If ATIP becomes the standard protocol for agent trust, competing means either:
+1. Implementing ATIP (which funnels verification to us as reference implementation)
+2. Creating a competing protocol (fragmentation that platforms will resist)
+
+### Embedding Moat (Tactical)
+
+Once `agentpier-crewai`, `agentpier-langchain`, and `agentpier-autogen` are in framework docs, developers use them by default. Switching requires ripping out integration code.
+
+---
+
+## 5. Acquisition Positioning
+
+### What makes infrastructure companies acquirable
+
+| Factor | Stripe (2010-2013) | Twilio (2008-2012) | AgentPier (2026) |
+|--------|--------------------|--------------------|------------------|
+| **Open protocol / API** | Stripe.js, Elements | REST API | ATIP, V-Tokens |
+| **Per-transaction pricing** | 2.9% + $0.30 | $0.0075/message | $0.005/verification |
+| **Developer-first** | 7 lines of code | 5 lines of code | 3 lines of code |
+| **Network data** | Payment fraud patterns | Communication data | Trust verification data |
+| **Embed in ecosystem** | Shopify, WooCommerce | Uber, WhatsApp | CrewAI, LangChain |
+
+### Acquirer-specific value propositions
+
+**OpenAI ($500M-$1B opportunity)**
+- Problem: GPT Store has millions of GPTs with zero trust infrastructure
+- What they get: Ready-made trust layer, ATIP becomes OpenAI-standard
+- Strategic value: Trust as a competitive advantage vs. Anthropic/Google
+- Integration: ATIP verification baked into GPT Store, custom GPT creation flow
+
+**Anthropic ($200M-$500M opportunity)**
+- Problem: MCP handles capability discovery but not trust
+- What they get: Trust companion protocol to MCP
+- Strategic value: "MCP + ATIP" = complete agent interoperability standard
+- Integration: Claude agents natively issue and verify ATIP tokens
+
+**Google ($300M-$800M opportunity)**
+- Problem: Vertex AI Agent Builder needs a trust story for enterprise
+- What they get: Enterprise trust infrastructure for Google Cloud platform play
+- Strategic value: Trust layer differentiates Google Cloud for agent deployment
+- Integration: ATIP as a Google Cloud service, trust verification for Vertex agents
+
+**Microsoft ($400M-$1B opportunity)**
+- Problem: GitHub + AutoGen + Copilot are disconnected on trust
+- What they get: Unified trust infrastructure across Microsoft's agent portfolio
+- Strategic value: GitHub contribution history + ATIP trust scores = comprehensive developer/agent trust
+- Integration: Trust verification in GitHub Marketplace, AutoGen, Copilot Studio
+
+### Acquisition metrics (what they'd evaluate)
+
+| Metric | Current | 6-Month Target | 18-Month Target |
+|--------|---------|----------------|-----------------|
+| Monthly verifications | 0 | 500K | 10M |
+| Registered agents | 0 | 2,000 | 50,000 |
+| Integrated platforms | 0 | 5 | 20 |
+| MRR | $0 | $5K | $50K |
+| Framework integrations | 2 | 4 | 6 |
+| Protocol implementations | 1 (us) | 1 | 3+ |
+| Cross-platform data records | 0 | 500K | 50M |
+
+### Acquisition timeline
+
+- **Month 6-12:** Build traction metrics. Focus on verification volume and platform count.
+- **Month 12-18:** Begin acquisition-adjacent conversations. Participate in acquirer ecosystems (OpenAI partner program, Anthropic partner program, Google Cloud partner).
+- **Month 18-24:** Active acquisition conversations OR Series A for independence.
+
+**Key decision at Month 18:** If MRR > $50K and growing 20%+ MoM, pursue independence. If MRR < $50K but verification volume is high and strategic interest exists, pursue acquisition.
+
+---
+
+## 6. Revenue Diversification (Year 2+)
+
+### Revenue Stream: Trust Analytics Dashboard — $99-499/month
+
+For agent operators who want insights into their trust performance:
+- Trust score trends over time
+- Verification volume analytics
+- Peer comparison (anonymized)
+- Recommendations for improving trust scores
+
+**Target market:** Agent development studios with 50+ agents.
+**Timeline:** Build after reaching $5K MRR from verification revenue.
+
+### Revenue Stream: Certification Program — $500-2,500/agent
+
+Manual trust audit for high-value agents:
+- Code review
+- Security assessment
+- Performance benchmarking
+- "ATIP Certified" badge (different from automated score)
+
+**Target market:** Enterprise agents handling financial transactions, healthcare data, legal workflows.
+**Timeline:** Build after reaching $10K MRR. Requires hiring a security auditor (contract).
+
+### Revenue Stream: Trust Insurance — 0.1-0.5% of transaction value
+
+Guarantee backed by trust scores:
+- "If this ATIP-Certified agent fails, we cover damages up to $X"
+- Insurance underwritten by partner (we don't take on risk)
+- Revenue from referral commission
+
+**Target market:** High-value agent-mediated transactions.
+**Timeline:** Year 2+. Requires insurance partner and regulatory navigation.
+
+---
+
+## 7. Financial Summary
+
+### Path to Sustainability
+
+| Milestone | Metric | Timeline |
+|-----------|--------|----------|
+| Breakeven | $150/mo revenue (30K verifications) | Month 2-3 |
+| Ramen profitable | $3K/mo MRR | Month 5-6 |
+| Sustainable | $5K/mo MRR | Month 6-8 |
+| Growth mode | $15K/mo MRR | Month 12 |
+| Acquisition-ready | $50K/mo MRR or 10M monthly verifications | Month 18 |
+
+### Why this works with $0 marketing budget
+
+1. **Distribution through SDKs** — `pip install agentpier` is free distribution
+2. **Framework docs are marketing** — integration pages on CrewAI/LangChain drive adoption
+3. **Night Architecture is content marketing** — thought leadership that costs nothing but time
+4. **Per-verification pricing has no sales cycle** — developers start free, scale automatically
+5. **Open protocol attracts contributors** — ATIP improvements come from the community
+
+### What would break this model
+
+1. **Big Tech builds trust in-house** — Mitigation: Be embedded in 10+ platforms before they start. Protocol lock-in through ATIP standard.
+2. **Verification volume doesn't materialize** — Mitigation: Fall back to subscription model ($199/mo for platforms). Per-verification is better, but subscriptions still work.
+3. **Free tier is too generous** — Mitigation: Reduce free limits if conversion to paid is too low. Current limits (1K/mo) are calibrated for individual developers, not platforms.
+4. **Pricing is too low** — Mitigation: $0.005 is a starting point. Increase to $0.01 if demand is inelastic. Stripe raised prices over time as they became essential infrastructure.
+
+---
+
+*Business Model v2 — AgentPier*
+*Last Updated: March 6, 2026*
+*Next Review: April 6, 2026*

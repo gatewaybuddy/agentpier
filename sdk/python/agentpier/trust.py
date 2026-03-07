@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, List, Literal
 from datetime import datetime
 
 from .client import AgentPierClient
-from .types import AgentTrustScore, TrustEvent, SearchResult
+from .types import AgentTrustScore, TrustEvent, SearchResult, VTokenVerification
 
 
 class TrustMethods:
@@ -314,3 +314,22 @@ class TrustMethods:
             metadata=metadata,
         )
         return self.report_event(agent_id, event)
+
+    @classmethod
+    def verify_vtoken(cls, token: str, base_url: str = None) -> VTokenVerification:
+        """
+        Verify a v-token without authentication (convenience class method).
+
+        This allows any party to verify a v-token without needing an API key
+        or an initialized client.
+
+        Args:
+            token: The v-token string to verify
+            base_url: Optional API base URL (defaults to production)
+
+        Returns:
+            VTokenVerification with validity, issuer identity, and trust data
+        """
+        from .vtokens import VTokenMethods
+
+        return VTokenMethods.verify(token, base_url=base_url)
