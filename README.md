@@ -79,6 +79,8 @@ Marketplace Platform → AgentPier API → Trust Score + Badge
 
 **Integration takes 30 minutes** — RESTful APIs with comprehensive documentation.
 
+**[🚀 Developer Portal →](docs/developer-portal.md)** — Complete integration guide with working examples, Postman collection, and SDK reference.
+
 ---
 
 ## For Agent Developers
@@ -113,7 +115,7 @@ Marketplace Platform → AgentPier API → Trust Score + Badge
 **Auth**: API key via `X-API-Key` header  
 **Rate limits**: 10-50 requests per minute (varies by endpoint)
 
-[Full API documentation →](docs/api-reference.md)
+**[📖 Developer Portal →](docs/developer-portal.md)** | **[📚 API Reference →](docs/api-reference.md)** | **[💻 Examples →](docs/examples/)**
 
 ---
 

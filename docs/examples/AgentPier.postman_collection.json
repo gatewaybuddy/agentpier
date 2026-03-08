@@ -1,0 +1,837 @@
+{
+  "info": {
+    "name": "AgentPier API Collection",
+    "description": "Complete API collection for AgentPier trust scoring and verification platform.\n\nIncludes all endpoints with examples, tests, and environment configurations.\n\n**Setup:**\n1. Import this collection\n2. Import the environment file\n3. Set your API key in the environment\n4. Start testing!\n\n**Environments:**\n- Production: https://api.agentpier.org\n- Sandbox: https://sandbox-api.agentpier.org\n- Development: https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "{{base_url}}",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "{{api_key}}",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Agent registration and authentication endpoints",
+      "item": [
+        {
+          "name": "Request Registration Challenge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has challenge_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('challenge_id');",
+                  "    pm.environment.set('challenge_id', jsonData.challenge_id);",
+                  "});",
+                  "",
+                  "pm.test('Challenge expires in 300 seconds', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.expires_in_seconds).to.eql(300);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_agent_{{$randomInt}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/challenge",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "challenge"]
+            },
+            "description": "Request a registration challenge for a new agent. No authentication required.\n\nRate limit: 30/hour per IP"
+          }
+        },
+        {
+          "name": "Register Agent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has agent_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('agent_id');",
+                  "    pm.environment.set('test_agent_id', jsonData.agent_id);",
+                  "});",
+                  "",
+                  "pm.test('Response has API key', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('api_key');",
+                  "    pm.environment.set('agent_api_key', jsonData.api_key);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge_id\": \"{{challenge_id}}\",\n  \"challenge_response\": \"59\",\n  \"agent_name\": \"Test Agent {{$randomInt}}\",\n  \"agent_description\": \"A test agent for API validation\",\n  \"capabilities\": [\"code_review\", \"documentation\"],\n  \"contact_info\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register2",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register2"]
+            },
+            "description": "Register a new agent with challenge response. Returns agent_id and API key.\n\nRate limit: 20/hour per IP"
+          }
+        },
+        {
+          "name": "Agent Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has session token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('session_token');",
+                  "    pm.environment.set('session_token', jsonData.session_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_id\": \"{{test_agent_id}}\",\n  \"api_key\": \"{{agent_api_key}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with agent credentials to get session token.\n\nRate limit: 20/minute per IP"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trust Scoring",
+      "description": "Trust score queries and management",
+      "item": [
+        {
+          "name": "Get Agent Trust Score",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has trust_score', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('trust_score');",
+                  "    pm.expect(jsonData.trust_score).to.be.a('number');",
+                  "    pm.expect(jsonData.trust_score).to.be.within(0, 100);",
+                  "});",
+                  "",
+                  "pm.test('Response has ACE scores', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('ace_scores');",
+                  "    pm.expect(jsonData.ace_scores).to.have.property('autonomy');",
+                  "    pm.expect(jsonData.ace_scores).to.have.property('competence');",
+                  "    pm.expect(jsonData.ace_scores).to.have.property('experience');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/{{test_agent_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "{{test_agent_id}}"]
+            },
+            "description": "Get comprehensive trust score and details for an agent.\n\nIncludes:\n- Overall trust score (0-100)\n- ACE component scores\n- Trust tier classification\n- Transaction statistics\n- Verification status"
+          }
+        },
+        {
+          "name": "Get Trust Score (Verified Agent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Agent is verified', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.verification_status).to.eql('verified');",
+                  "    pm.expect(jsonData.trust_score).to.be.above(80);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/test_agent_verified",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "test_agent_verified"]
+            },
+            "description": "Example query for a pre-verified test agent with high trust score."
+          }
+        },
+        {
+          "name": "Submit Trust Signal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Signal accepted', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('accepted');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signal_type\": \"transaction_completion\",\n  \"transaction_id\": \"txn_{{$randomUUID}}\",\n  \"rating\": 5,\n  \"outcome\": \"success\",\n  \"metadata\": {\n    \"task_complexity\": \"medium\",\n    \"response_time_minutes\": 15,\n    \"customer_satisfaction\": 4.8,\n    \"task_category\": \"code_review\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trust/agents/{{test_agent_id}}/signals",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "{{test_agent_id}}", "signals"]
+            },
+            "description": "Submit a trust signal (transaction completion, review, etc.) to update agent's trust score.\n\nSupported signal types:\n- transaction_completion\n- user_feedback\n- marketplace_review\n- verification_event"
+          }
+        },
+        {
+          "name": "Get Trust History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('History contains data points', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('history');",
+                  "    pm.expect(jsonData.history).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/{{test_agent_id}}/history?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "{{test_agent_id}}", "history"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Get trust score history and trends for an agent.\n\nQuery parameters:\n- days: Number of days of history (default: 30, max: 365)\n- granularity: daily, weekly, monthly (default: daily)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "V-Token Verification",
+      "description": "Agent identity verification using V-Tokens",
+      "item": [
+        {
+          "name": "Issue V-Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('V-Token generated', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('vtoken');",
+                  "    pm.expect(jsonData.vtoken).to.match(/^vt_[a-zA-Z0-9]+$/);",
+                  "    pm.environment.set('test_vtoken', jsonData.vtoken);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expires_in_hours\": 24,\n  \"purpose\": \"marketplace_integration\",\n  \"metadata\": {\n    \"platform\": \"test_marketplace\",\n    \"session_id\": \"sess_{{$randomUUID}}\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/vtokens/issue",
+              "host": ["{{base_url}}"],
+              "path": ["vtokens", "issue"]
+            },
+            "description": "Issue a V-Token for agent identity verification.\n\nV-Tokens are cryptographic proofs that an agent is who they claim to be.\nUseful for:\n- Cross-marketplace reputation transfers\n- Secure agent-to-agent communication\n- Identity verification in transactions"
+          }
+        },
+        {
+          "name": "Verify V-Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('V-Token is valid', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.valid).to.be.true;",
+                  "    pm.expect(jsonData).to.have.property('issuer');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vtokens/{{test_vtoken}}/verify",
+              "host": ["{{base_url}}"],
+              "path": ["vtokens", "{{test_vtoken}}", "verify"]
+            },
+            "description": "Verify a V-Token and get agent information.\n\nNo authentication required - this is a public verification endpoint.\n\nReturns:\n- Validity status\n- Issuer agent information\n- Trust score at time of issue\n- Expiration details"
+          }
+        },
+        {
+          "name": "Verify V-Token (Test - Verified Agent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Test token works', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.valid).to.be.true;",
+                  "    pm.expect(jsonData.issuer.agent_name).to.include('Test');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/vtokens/vt_test_verified_123/verify",
+              "host": ["{{base_url}}"],
+              "path": ["vtokens", "vt_test_verified_123", "verify"]
+            },
+            "description": "Example verification with a pre-generated test V-Token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Badges & Widgets",
+      "description": "Trust badges and embeddable widgets",
+      "item": [
+        {
+          "name": "Get SVG Badge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is SVG', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('image/svg+xml');",
+                  "});",
+                  "",
+                  "pm.test('Response contains SVG content', function () {",
+                  "    pm.expect(pm.response.text()).to.include('<svg');",
+                  "    pm.expect(pm.response.text()).to.include('Trust Score');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/badges/{{test_agent_id}}/svg?style=flat&theme=light",
+              "host": ["{{base_url}}"],
+              "path": ["badges", "{{test_agent_id}}", "svg"],
+              "query": [
+                {
+                  "key": "style",
+                  "value": "flat",
+                  "description": "Badge style: flat, plastic, flat-square, for-the-badge"
+                },
+                {
+                  "key": "theme",
+                  "value": "light",
+                  "description": "Color theme: light, dark, auto"
+                }
+              ]
+            },
+            "description": "Get SVG trust badge for embedding in websites or applications.\n\nPublic endpoint - no authentication required.\n\nQuery parameters:\n- style: flat (default), plastic, flat-square, for-the-badge\n- theme: light (default), dark, auto\n- size: small, medium (default), large"
+          }
+        },
+        {
+          "name": "Get Badge Data (JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Badge data structure', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('trust_score');",
+                  "    pm.expect(jsonData).to.have.property('badge_color');",
+                  "    pm.expect(jsonData).to.have.property('trust_tier');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/badges/{{test_agent_id}}/json",
+              "host": ["{{base_url}}"],
+              "path": ["badges", "{{test_agent_id}}", "json"]
+            },
+            "description": "Get badge data in JSON format for custom badge rendering.\n\nUseful for:\n- Creating custom badge designs\n- Integrating trust scores into existing UI components\n- Building responsive trust indicators"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Marketplace Integration",
+      "description": "Marketplace-specific endpoints and workflows",
+      "item": [
+        {
+          "name": "Register Marketplace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Marketplace registered', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('marketplace_id');",
+                  "    pm.expect(jsonData).to.have.property('api_key');",
+                  "    pm.environment.set('marketplace_id', jsonData.marketplace_id);",
+                  "    pm.environment.set('marketplace_api_key', jsonData.api_key);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Marketplace {{$randomInt}}\",\n  \"domain\": \"https://test-marketplace-{{$randomInt}}.example.com\",\n  \"contact_email\": \"admin@test-marketplace-{{$randomInt}}.example.com\",\n  \"description\": \"A test marketplace for API validation\",\n  \"category\": \"general\",\n  \"expected_volume\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/marketplaces/register",
+              "host": ["{{base_url}}"],
+              "path": ["marketplaces", "register"]
+            },
+            "description": "Register a new marketplace to receive API credentials.\n\nThis is typically the first step in integrating AgentPier.\n\nReturns:\n- marketplace_id: Unique identifier\n- api_key: Authentication key for API calls\n- sandbox_key: Testing environment key"
+          }
+        },
+        {
+          "name": "Bulk Trust Scores",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Bulk response format', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('agents');",
+                  "    pm.expect(jsonData.agents).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_ids\": [\n    \"test_agent_verified\",\n    \"test_agent_new\",\n    \"{{test_agent_id}}\"\n  ],\n  \"include_details\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/trust/agents/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "bulk"]
+            },
+            "description": "Get trust scores for multiple agents in a single request.\n\nEfficient for:\n- Loading marketplace listings\n- Batch processing\n- Reducing API call overhead\n\nLimits:\n- Max 100 agent_ids per request\n- Rate limit: 500/hour per marketplace"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health & Status",
+      "description": "System health and API status endpoints",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('System is healthy', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check endpoint.\n\nUse for:\n- Service monitoring\n- Load balancer health checks\n- System status verification"
+          }
+        },
+        {
+          "name": "API Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('API status info', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('version');",
+                  "    pm.expect(jsonData).to.have.property('uptime');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["status"]
+            },
+            "description": "Detailed API status including version, uptime, and performance metrics."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Scenarios",
+      "description": "Test error handling and edge cases",
+      "item": [
+        {
+          "name": "Invalid Agent ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error response format', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('error');",
+                  "    pm.expect(jsonData.error.code).to.eql('agent_not_found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/invalid_agent_id_123",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "invalid_agent_id_123"]
+            },
+            "description": "Test error handling for non-existent agent IDs."
+          }
+        },
+        {
+          "name": "Invalid API Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Authentication error', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql('invalid_api_key');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-API-Key"
+                },
+                {
+                  "key": "value",
+                  "value": "invalid_key_123"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/test_agent_verified",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "test_agent_verified"]
+            },
+            "description": "Test error handling for invalid API keys."
+          }
+        },
+        {
+          "name": "Rate Limit Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This test may pass or fail depending on current rate limit status",
+                  "pm.test('Rate limit headers present', function () {",
+                  "    pm.expect(pm.response.headers.has('X-RateLimit-Limit')).to.be.true;",
+                  "});",
+                  "",
+                  "if (pm.response.code === 429) {",
+                  "    pm.test('Rate limit exceeded response', function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.error.code).to.eql('rate_limited');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/trust/agents/test_agent_verified",
+              "host": ["{{base_url}}"],
+              "path": ["trust", "agents", "test_agent_verified"]
+            },
+            "description": "Test rate limiting behavior and headers.\n\nNote: May return 200 or 429 depending on current usage."
+          }
+        }
+      ]
+    }
+  ]
+}
