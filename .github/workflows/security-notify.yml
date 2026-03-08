@@ -1,0 +1,173 @@
+name: Security Notification System
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      severity:
+        required: true
+        type: string
+      vulnerability_count:
+        required: true
+        type: string
+      scan_type:
+        required: true
+        type: string
+      details:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DISCORD_WEBHOOK_URL:
+        required: false
+
+jobs:
+  notify-security-team:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.severity == 'HIGH' || inputs.severity == 'CRITICAL' || inputs.vulnerability_count != '0' }}
+    
+    steps:
+      - name: Prepare notification content
+        id: prepare
+        run: |
+          PROJECT="${{ inputs.project_name }}"
+          SEVERITY="${{ inputs.severity }}"
+          COUNT="${{ inputs.vulnerability_count }}"
+          SCAN_TYPE="${{ inputs.scan_type }}"
+          DETAILS="${{ inputs.details }}"
+          
+          # Set severity emoji and color
+          case "$SEVERITY" in
+            "CRITICAL")
+              EMOJI="🚨"
+              COLOR="15158332"  # Red
+              ;;
+            "HIGH")
+              EMOJI="⚠️"
+              COLOR="16776960"  # Yellow
+              ;;
+            *)
+              EMOJI="ℹ️"
+              COLOR="3447003"   # Blue
+              ;;
+          esac
+          
+          # Build Discord message
+          TITLE="$EMOJI Security Alert: $PROJECT"
+          DESCRIPTION="**Severity**: $SEVERITY\n**Scan Type**: $SCAN_TYPE\n**Vulnerabilities Found**: $COUNT"
+          
+          if [ -n "$DETAILS" ]; then
+            DESCRIPTION="$DESCRIPTION\n\n**Details**:\n$DETAILS"
+          fi
+          
+          DESCRIPTION="$DESCRIPTION\n\n**Action Required**: Review and address vulnerabilities according to [response procedures](https://github.com/openclaw/openclaw/blob/main/docs/security/vulnerability-response-procedures.md)"
+          DESCRIPTION="$DESCRIPTION\n**Workflow Run**: [View Details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          
+          # Create Discord webhook payload
+          cat > discord_payload.json << EOF
+          {
+            "username": "Security Monitor",
+            "avatar_url": "https://github.githubassets.com/images/modules/site/icons/security.svg",
+            "embeds": [
+              {
+                "title": "$TITLE",
+                "description": "$DESCRIPTION",
+                "color": $COLOR,
+                "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
+                "footer": {
+                  "text": "Cross-Project Security Monitoring"
+                },
+                "fields": [
+                  {
+                    "name": "Repository",
+                    "value": "${{ github.repository }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "inline": true
+                  },
+                  {
+                    "name": "Commit",
+                    "value": "[${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})",
+                    "inline": true
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          
+          echo "notification_needed=true" >> $GITHUB_OUTPUT
+
+      - name: Send Discord notification
+        if: steps.prepare.outputs.notification_needed == 'true' && secrets.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d @discord_payload.json \
+            --fail --silent --show-error
+            
+          if [ $? -eq 0 ]; then
+            echo "✅ Discord notification sent successfully"
+          else
+            echo "❌ Failed to send Discord notification"
+            exit 1
+          fi
+
+      - name: Create GitHub Issue for HIGH/CRITICAL vulnerabilities
+        if: ${{ (inputs.severity == 'HIGH' || inputs.severity == 'CRITICAL') && inputs.vulnerability_count != '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 ${context.payload.inputs?.severity || 'HIGH'} Security Vulnerability Detected`;
+            const body = `## Security Alert
+            
+            **Project**: ${{ inputs.project_name }}
+            **Severity**: ${{ inputs.severity }}
+            **Scan Type**: ${{ inputs.scan_type }}
+            **Vulnerabilities Found**: ${{ inputs.vulnerability_count }}
+            
+            ### Details
+            ${{ inputs.details }}
+            
+            ### Action Required
+            This issue requires immediate attention according to our [vulnerability response procedures](https://github.com/openclaw/openclaw/blob/main/docs/security/vulnerability-response-procedures.md).
+            
+            **Response Timeline**:
+            - CRITICAL: 0-24 hours
+            - HIGH: 24-72 hours
+            
+            ### Workflow Information
+            - **Repository**: ${{ github.repository }}
+            - **Branch**: ${{ github.ref_name }}
+            - **Commit**: ${{ github.sha }}
+            - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ### Next Steps
+            1. Review security scan results in workflow artifacts
+            2. Assess impact and affected components
+            3. Create security fix branch
+            4. Implement and test fixes
+            5. Deploy according to severity timeline
+            6. Update this issue with resolution details
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['security', 'vulnerability', '${{ inputs.severity }}', 'urgent']
+            });
+
+      - name: Log notification status
+        run: |
+          echo "🔔 Security notification workflow completed"
+          echo "Project: ${{ inputs.project_name }}"
+          echo "Severity: ${{ inputs.severity }}"
+          echo "Vulnerabilities: ${{ inputs.vulnerability_count }}"
+          echo "Discord webhook available: ${{ secrets.DISCORD_WEBHOOK_URL != '' }}"

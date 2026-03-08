@@ -124,6 +124,54 @@ jobs:
                 print('💡 Consider updating dependencies to address reported advisories')
         "
 
+    - name: Check vulnerability count for notifications
+      id: vuln-count
+      continue-on-error: true
+      run: |
+        # Extract vulnerability counts for notification
+        total_vulns=0
+        high_vulns=0
+        
+        for audit_file in */*-audit.json; do
+          if [ -f "$audit_file" ]; then
+            python3 -c "
+        import json
+        import sys
+        
+        with open('$audit_file', 'r') as f:
+            data = json.load(f)
+            vulns = data.get('vulnerabilities', [])
+            total = len(vulns)
+            high = 0
+            
+            for vuln in vulns:
+                vuln_str = json.dumps(vuln).upper()
+                if 'HIGH' in vuln_str or 'CRITICAL' in vuln_str:
+                    high += 1
+            
+            print(f'TOTAL: {total}')
+            print(f'HIGH: {high}')
+        " >> vuln_counts.txt
+          fi
+        done
+        
+        if [ -f "vuln_counts.txt" ]; then
+          total_vulns=$(grep "TOTAL:" vuln_counts.txt | awk -F': ' '{sum += $2} END {print sum}')
+          high_vulns=$(grep "HIGH:" vuln_counts.txt | awk -F': ' '{sum += $2} END {print sum}')
+        fi
+        
+        echo "total_vulnerabilities=${total_vulns:-0}" >> $GITHUB_OUTPUT
+        echo "high_vulnerabilities=${high_vulns:-0}" >> $GITHUB_OUTPUT
+        
+        # Determine severity for notification
+        if [ "${high_vulns:-0}" -gt 0 ]; then
+          echo "severity=HIGH" >> $GITHUB_OUTPUT
+        elif [ "${total_vulns:-0}" -gt 0 ]; then
+          echo "severity=MEDIUM" >> $GITHUB_OUTPUT
+        else
+          echo "severity=LOW" >> $GITHUB_OUTPUT
+        fi
+
     - name: Upload audit results
       uses: actions/upload-artifact@v4
       if: always()
@@ -132,3 +180,82 @@ jobs:
         path: |
           */*-audit.json
         retention-days: 30
+
+  # Security notification job - runs after all matrix jobs complete
+  notify-security:
+    needs: security-audit
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Download audit results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: security-audit-results-*
+          merge-multiple: true
+
+      - name: Analyze aggregated results
+        id: analyze
+        run: |
+          total_vulns=0
+          high_vulns=0
+          vuln_details=""
+          
+          for audit_file in *-audit.json; do
+            if [ -f "$audit_file" ]; then
+              echo "Processing $audit_file"
+              python3 -c "
+          import json
+          import sys
+          
+          with open('$audit_file', 'r') as f:
+              data = json.load(f)
+              vulns = data.get('vulnerabilities', [])
+              
+              for vuln in vulns:
+                  vuln_id = vuln.get('id', 'unknown')
+                  vuln_name = vuln.get('package', {}).get('name', 'unknown')
+                  vuln_version = vuln.get('package', {}).get('version', 'unknown')
+                  
+                  print(f'VULN: {vuln_name} {vuln_version}: {vuln_id}')
+                  
+                  # Check for HIGH/CRITICAL
+                  vuln_str = json.dumps(vuln).upper()
+                  if 'HIGH' in vuln_str or 'CRITICAL' in vuln_str:
+                      print(f'HIGH: {vuln_name} {vuln_version}: {vuln_id}')
+          " >> analysis.txt
+            fi
+          done
+          
+          if [ -f "analysis.txt" ]; then
+            total_vulns=$(grep "^VULN:" analysis.txt | wc -l)
+            high_vulns=$(grep "^HIGH:" analysis.txt | wc -l)
+            vuln_details=$(grep "^HIGH:" analysis.txt | head -5 | sed 's/^HIGH: /• /' | tr '\n' '\n')
+          fi
+          
+          echo "total_vulnerabilities=${total_vulns:-0}" >> $GITHUB_OUTPUT
+          echo "high_vulnerabilities=${high_vulns:-0}" >> $GITHUB_OUTPUT
+          
+          if [ "${high_vulns:-0}" -gt 0 ]; then
+            echo "severity=HIGH" >> $GITHUB_OUTPUT
+          elif [ "${total_vulns:-0}" -gt 0 ]; then
+            echo "severity=MEDIUM" >> $GITHUB_OUTPUT
+          else
+            echo "severity=LOW" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "vuln_details<<EOF" >> $GITHUB_OUTPUT
+          echo "$vuln_details" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Call notification workflow
+        if: steps.analyze.outputs.high_vulnerabilities != '0' || steps.analyze.outputs.total_vulnerabilities != '0'
+        uses: ./.github/workflows/security-notify.yml
+        with:
+          project_name: "AgentPier"
+          severity: ${{ steps.analyze.outputs.severity }}
+          vulnerability_count: ${{ steps.analyze.outputs.total_vulnerabilities }}
+          scan_type: "Python Dependencies (pip-audit)"
+          details: ${{ steps.analyze.outputs.vuln_details }}
+        secrets:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
