@@ -7,6 +7,12 @@ Globals:
     Timeout: 30
     MemorySize: 256
     Runtime: python3.12
+    VpcConfig:
+      SecurityGroupIds:
+        - !Ref LambdaSecurityGroup
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
     Environment:
       Variables:
         TABLE_NAME: !Ref AgentPierTable
@@ -14,6 +20,11 @@ Globals:
         CURSOR_SECRET: !Ref CursorSecret
         DEPLOY_VERSION: "2026-02-22-v3"
         ADMIN_API_KEY: !Ref AdminApiKey
+        REDIS_HOST: !GetAtt RateLimitCacheCluster.RedisEndpoint.Address
+        REDIS_PORT: !GetAtt RateLimitCacheCluster.RedisEndpoint.Port
+        METRICS_NAMESPACE: !Sub "AgentPier/${Stage}/RateLimit"
+    Policies:
+      - CloudWatchPutMetricPolicy: {}
 
 Parameters:
   Stage:
@@ -1050,6 +1061,58 @@ Resources:
             Method: GET
 
   # ============================================
+  # Rate Limiting Monitoring Endpoints
+  # ============================================
+  
+  GetRateLimitInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-rate-limit-info-${Stage}
+      Handler: handlers.rate_limit_info.get_rate_limit_info
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /rate-limits
+            Method: GET
+
+  GetRateLimitStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-rate-limit-status-${Stage}
+      Handler: handlers.rate_limit_info.get_rate_limit_status
+      CodeUri: ../src/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /rate-limits/status
+            Method: GET
+
+  GetRateLimitConfigFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-rate-limit-config-${Stage}
+      Handler: handlers.rate_limit_info.get_rate_limit_config
+      CodeUri: ../src/
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /rate-limits/config
+            Method: GET
+
+  # ============================================
   # DynamoDB — Single Table Design
   # ============================================
   AgentPierTable:
@@ -1094,6 +1157,256 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+
+  # ============================================
+  # ElastiCache Redis — Rate Limiting Cache
+  # ============================================
+  RateLimitCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      SubnetGroupName: !Sub agentpier-redis-${Stage}
+      Description: !Sub "Subnet group for AgentPier Redis cache - ${Stage}"
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+  RateLimitCacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub agentpier-redis-sg-${Stage}
+      GroupDescription: !Sub "Security group for AgentPier Redis cache - ${Stage}"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+          Description: "Allow Lambda access to Redis"
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-redis-sg-${Stage}
+
+  RateLimitCacheCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupId: !Sub agentpier-redis-${Stage}
+      Description: !Sub "Redis cluster for AgentPier rate limiting - ${Stage}"
+      NodeType: !If [IsProduction, cache.r7g.large, cache.t3.micro]
+      Port: 6379
+      NumCacheClusters: !If [IsProduction, 2, 1]
+      Engine: redis
+      EngineVersion: "7.0"
+      CacheParameterGroupName: default.redis7
+      CacheSubnetGroupName: !Ref RateLimitCacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref RateLimitCacheSecurityGroup
+      AutomaticFailoverEnabled: !If [IsProduction, true, false]
+      MultiAZEnabled: !If [IsProduction, true, false]
+      PreferredMaintenanceWindow: "sun:05:00-sun:06:00"
+      SnapshotRetentionLimit: !If [IsProduction, 7, 0]
+      SnapshotWindow: "04:00-05:00"
+      AtRestEncryptionEnabled: !If [IsProduction, true, false]
+      TransitEncryptionEnabled: !If [IsProduction, true, false]
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-redis-${Stage}
+        - Key: Purpose
+          Value: "Rate Limiting"
+
+  # ============================================
+  # VPC Configuration for Redis
+  # ============================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-vpc-${Stage}
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-private-subnet-1-${Stage}
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-private-subnet-2-${Stage}
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-public-subnet-1-${Stage}
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.4.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-public-subnet-2-${Stage}
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-igw-${Stage}
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-public-rt-${Stage}
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  NATGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-nat-eip-1-${Stage}
+
+  NATGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-nat-eip-2-${Stage}
+
+  NATGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-nat-1-${Stage}
+
+  NATGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-nat-2-${Stage}
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-private-rt-1-${Stage}
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-private-rt-2-${Stage}
+
+  PrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway1
+
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway2
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub agentpier-lambda-sg-${Stage}
+      GroupDescription: !Sub "Security group for AgentPier Lambda functions - ${Stage}"
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: "HTTPS outbound"
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          DestinationSecurityGroupId: !Ref RateLimitCacheSecurityGroup
+          Description: "Redis access"
+      Tags:
+        - Key: Name
+          Value: !Sub agentpier-lambda-sg-${Stage}
 
   # ============================================
   # S3 — Static Frontend

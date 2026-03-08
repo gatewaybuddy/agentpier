@@ -1,2 +1,5 @@
-# boto3 is included in Lambda runtime — no external deps needed
+# boto3 is included in Lambda runtime
 # All password hashing uses hashlib.scrypt (stdlib)
+
+# Enhanced rate limiting with Redis
+redis==5.0.1

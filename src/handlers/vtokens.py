@@ -20,6 +20,7 @@ from boto3.dynamodb.conditions import Key
 from utils.response import success, error, not_found, unauthorized, too_many_requests, handler
 from utils.auth import authenticate
 from utils.rate_limit import check_rate_limit
+from utils.enhanced_rate_limit import check_enhanced_rate_limit, rate_limit_middleware
 from utils.pagination import sign_cursor, verify_cursor
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
@@ -84,6 +85,7 @@ def _create_trust_event(table, user_id, event_type, vtoken_id):
 
 
 # === POST /vtokens ===
+@rate_limit_middleware("vtokens_create")
 @handler
 def create_vtoken(event, context):
     """Create a verification token. Requires API key."""
@@ -220,15 +222,10 @@ def create_vtoken(event, context):
 
 
 # === GET /vtokens/{token}/verify ===
+@rate_limit_middleware("vtokens_verify")
 @handler
 def verify_vtoken(event, context):
     """Verify a token's authenticity. Public — no auth required."""
-    # Rate limit: 100 verifications per IP per hour
-    allowed, remaining, retry_after = check_rate_limit(
-        event, "vtoken_verify", max_requests=100, window_seconds=3600
-    )
-    if not allowed:
-        return too_many_requests("Verification rate limit exceeded.", retry_after)
 
     path_params = event.get("pathParameters") or {}
     token_id = path_params.get("token", "")
