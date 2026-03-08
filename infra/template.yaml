@@ -20,11 +20,10 @@ Globals:
         CURSOR_SECRET: !Ref CursorSecret
         DEPLOY_VERSION: "2026-02-22-v3"
         ADMIN_API_KEY: !Ref AdminApiKey
-        REDIS_HOST: !GetAtt RateLimitCacheCluster.RedisEndpoint.Address
-        REDIS_PORT: !GetAtt RateLimitCacheCluster.RedisEndpoint.Port
+        REDIS_HOST: !GetAtt RateLimitCacheCluster.PrimaryEndPoint.Address
+        REDIS_PORT: !GetAtt RateLimitCacheCluster.PrimaryEndPoint.Port
         METRICS_NAMESPACE: !Sub "AgentPier/${Stage}/RateLimit"
-    Policies:
-      - CloudWatchPutMetricPolicy: {}
+
 
 Parameters:
   Stage:
@@ -1164,7 +1163,7 @@ Resources:
   RateLimitCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
-      SubnetGroupName: !Sub agentpier-redis-${Stage}
+      CacheSubnetGroupName: !Sub agentpier-redis-${Stage}
       Description: !Sub "Subnet group for AgentPier Redis cache - ${Stage}"
       SubnetIds:
         - !Ref PrivateSubnet1
@@ -1190,8 +1189,8 @@ Resources:
     Type: AWS::ElastiCache::ReplicationGroup
     Properties:
       ReplicationGroupId: !Sub agentpier-redis-${Stage}
-      Description: !Sub "Redis cluster for AgentPier rate limiting - ${Stage}"
-      NodeType: !If [IsProduction, cache.r7g.large, cache.t3.micro]
+      ReplicationGroupDescription: !Sub "Redis cluster for AgentPier rate limiting - ${Stage}"
+      CacheNodeType: !If [IsProduction, cache.r7g.large, cache.t3.micro]
       Port: 6379
       NumCacheClusters: !If [IsProduction, 2, 1]
       Engine: redis
@@ -1399,11 +1398,6 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
           Description: "HTTPS outbound"
-        - IpProtocol: tcp
-          FromPort: 6379
-          ToPort: 6379
-          DestinationSecurityGroupId: !Ref RateLimitCacheSecurityGroup
-          Description: "Redis access"
       Tags:
         - Key: Name
           Value: !Sub agentpier-lambda-sg-${Stage}

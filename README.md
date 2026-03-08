@@ -140,7 +140,8 @@ We welcome contributions! Please read our [contributing guide](CONTRIBUTING.md) 
 ```bash
 git clone https://github.com/gatewaybuddy/agentpier.git
 cd agentpier
-pip install -r requirements.txt
+pip install -r src/requirements.txt
+pip install -r tests/requirements-test.txt
 python -m pytest tests/
 ```
 
