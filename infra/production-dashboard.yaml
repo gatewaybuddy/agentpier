@@ -1,0 +1,564 @@
+# Production Monitoring Dashboard for AgentPier
+# Enhanced CloudWatch Dashboard with business metrics, SLA monitoring, and operational insights
+
+Resources:
+  
+  # ============================================
+  # Production Monitoring Lambda Function
+  # ============================================
+  
+  ProductionMonitoringFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-production-monitoring-${Stage}
+      Handler: monitoring.production_monitoring.production_monitoring_handler
+      CodeUri: ../src/
+      Runtime: python3.11
+      Timeout: 300
+      MemorySize: 1024
+      Environment:
+        Variables:
+          METRICS_NAMESPACE: !Sub "AgentPier/${Stage}"
+          TABLE_NAME: !Ref AgentPierTable
+      Policies:
+        - CloudWatchPutMetricPolicy: {}
+        - DynamoDBReadPolicy:
+            TableName: !Ref AgentPierTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AgentPierTable
+      Events:
+        ProductionMetricsSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: "rate(5 minutes)"
+            Description: "Collect production business and SLA metrics"
+
+  # ============================================
+  # Enhanced CloudWatch Alarms for Production
+  # ============================================
+
+  # SLA Availability Alarm (< 99.5%)
+  SLAAvailabilityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AgentPier-${Stage}-SLA-Availability-Breach"
+      AlarmDescription: "SLA availability below 99.5%"
+      MetricName: SLA_Availability
+      Namespace: !Sub "AgentPier/${Stage}/SLA"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 99.5
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref ProductionAlertsTopic
+
+  # SLA Latency Alarm (P99 > 2 seconds)
+  SLALatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AgentPier-${Stage}-SLA-Latency-Breach"
+      AlarmDescription: "99th percentile latency above 2 seconds"
+      MetricName: SLA_Latency_P99
+      Namespace: !Sub "AgentPier/${Stage}/SLA"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 2000
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref ProductionAlertsTopic
+
+  # Trust Score Anomaly Alarm
+  TrustAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AgentPier-${Stage}-Trust-Anomalies"
+      AlarmDescription: "Trust calculation anomalies detected"
+      MetricName: TrustScoreAnomalies
+      Namespace: !Sub "AgentPier/${Stage}"
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ProductionAlertsTopic
+
+  # Business Growth Anomaly (New registrations spike)
+  RegistrationSpikeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AgentPier-${Stage}-Registration-Spike"
+      AlarmDescription: "Unusual spike in new agent registrations"
+      MetricName: NewAgentRegistrations
+      Namespace: !Sub "AgentPier/${Stage}"
+      Statistic: Sum
+      Period: 3600  # 1 hour
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ProductionAlertsTopic
+
+  # V-Token Validation Drop Alarm
+  VTokenValidationDropAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "AgentPier-${Stage}-VToken-Validation-Drop"
+      AlarmDescription: "V-Token validations dropped significantly"
+      MetricName: VTokensValidated
+      Namespace: !Sub "AgentPier/${Stage}"
+      Statistic: Sum
+      Period: 3600  # 1 hour
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref ProductionAlertsTopic
+
+  # ============================================
+  # Production Alerts SNS Topic
+  # ============================================
+
+  ProductionAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AgentPier-${Stage}-Production-Alerts"
+      DisplayName: !Sub "AgentPier ${Stage} Production Monitoring Alerts"
+
+  # ============================================
+  # Comprehensive Production Dashboard
+  # ============================================
+
+  ProductionDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "AgentPier-${Stage}-Production-Operations"
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 2,
+              "properties": {
+                "markdown": "# AgentPier ${Stage} - Production Operations Dashboard\n\n**SLA Targets**: 99.5% Availability | <2s P99 Latency | <1% Error Rate\n\n[Business Metrics](#business) | [SLA Performance](#sla) | [System Health](#system) | [Anomalies](#anomalies)"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 2,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "title": "SLA Availability",
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "SLA Target (99.5%)",
+                      "value": 99.5,
+                      "fill": "below"
+                    }
+                  ]
+                },
+                "metrics": [
+                  [ "AgentPier/${Stage}/SLA", "SLA_Availability" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "yAxis": {
+                  "left": {
+                    "min": 99,
+                    "max": 100
+                  }
+                },
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 6,
+              "y": 2,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "title": "SLA Latency (P99)",
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "SLA Target (2s)",
+                      "value": 2000,
+                      "fill": "above"
+                    }
+                  ]
+                },
+                "metrics": [
+                  [ "AgentPier/${Stage}/SLA", "SLA_Latency_P99" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "yAxis": {
+                  "left": {
+                    "min": 0
+                  }
+                },
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 2,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "title": "SLA Error Rate",
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "SLA Target (1%)",
+                      "value": 1,
+                      "fill": "above"
+                    }
+                  ]
+                },
+                "metrics": [
+                  [ "AgentPier/${Stage}/SLA", "SLA_ErrorRate" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "yAxis": {
+                  "left": {
+                    "min": 0,
+                    "max": 5
+                  }
+                },
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 18,
+              "y": 2,
+              "width": 6,
+              "height": 6,
+              "properties": {
+                "title": "Request Throughput",
+                "metrics": [
+                  [ "AgentPier/${Stage}/SLA", "SLA_Throughput" ]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "yAxis": {
+                  "left": {
+                    "min": 0
+                  }
+                },
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 8,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Business Metrics"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 9,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Core Business Operations",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "TrustScoresCalculated", { "stat": "Sum" } ],
+                  [ ".", "VTokensValidated", { "stat": "Sum" } ],
+                  [ ".", "ApiRequestsTotal", { "stat": "Sum" } ],
+                  [ ".", "NewAgentRegistrations", { "stat": "Sum" } ]
+                ],
+                "period": 3600,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 9,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Trust Score Analytics",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "AverageTrustScore", { "stat": "Average" } ],
+                  [ ".", "TrustScoreAnomalies", { "stat": "Sum", "yAxis": "right" } ]
+                ],
+                "period": 3600,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 9,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Trust Tier Distribution",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "TrustTierDistribution", "TrustTier", "Tier 1" ],
+                  [ "...", "Tier 2" ],
+                  [ "...", "Tier 3" ],
+                  [ "...", "Tier 4" ],
+                  [ "...", "Tier 5" ]
+                ],
+                "period": 3600,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 15,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## System Health & Infrastructure"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Lambda Performance",
+                "metrics": [
+                  [ "AWS/Lambda", "Duration", "FunctionName", "agentpier-trust-scoring-${Stage}", { "stat": "Average" } ],
+                  [ ".", "Invocations", ".", ".", { "stat": "Sum", "yAxis": "right" } ],
+                  [ ".", "Errors", ".", ".", { "stat": "Sum", "yAxis": "right" } ],
+                  [ ".", "Throttles", ".", ".", { "stat": "Sum", "yAxis": "right" } ]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "DynamoDB Performance",
+                "metrics": [
+                  [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${AgentPierTable}" ],
+                  [ ".", "ConsumedWriteCapacityUnits", ".", "." ],
+                  [ ".", "ReadThrottledRequests", ".", ".", { "stat": "Sum", "yAxis": "right" } ],
+                  [ ".", "WriteThrottledRequests", ".", ".", { "stat": "Sum", "yAxis": "right" } ]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 22,
+              "width": 24,
+              "height": 1,
+              "properties": {
+                "markdown": "## Anomaly Detection & Alerts"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 23,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Trust Calculation Anomalies",
+                "metrics": [
+                  [ "AgentPier/${Stage}/Anomalies", "TrustAnomaly_score_jump", "Severity", "high", { "stat": "Sum" } ],
+                  [ "...", "medium" ],
+                  [ ".", "TrustAnomaly_calculation_time", ".", "medium" ],
+                  [ ".", "TrustAnomaly_validation_failure", ".", "high" ],
+                  [ "...", "critical" ]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 23,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Operational Alerts",
+                "metrics": [
+                  [ "AWS/CloudWatch", "AlarmState", "AlarmName", "AgentPier-${Stage}-SLA-Availability-Breach", { "stat": "Maximum" } ],
+                  [ "...", "AgentPier-${Stage}-SLA-Latency-Breach" ],
+                  [ "...", "AgentPier-${Stage}-Trust-Anomalies" ],
+                  [ "...", "AgentPier-${Stage}-Registration-Spike" ]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 23,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "title": "Capacity Planning Metrics",
+                "metrics": [
+                  [ "AWS/Lambda", "ConcurrentExecutions", "FunctionName", "agentpier-trust-scoring-${Stage}", { "stat": "Maximum" } ],
+                  [ "AWS/DynamoDB", "UserErrors", "TableName", "${AgentPierTable}", { "stat": "Sum" } ],
+                  [ ".", "SystemErrors", ".", ".", { "stat": "Sum" } ],
+                  [ "AWS/ApiGateway", "Count", "ApiName", "agentpier-api-${Stage}", { "stat": "Sum" } ]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            }
+          ]
+        }
+
+  # ============================================
+  # Business Intelligence Dashboard
+  # ============================================
+
+  BusinessIntelligenceDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "AgentPier-${Stage}-Business-Intelligence"
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 2,
+              "properties": {
+                "markdown": "# AgentPier ${Stage} - Business Intelligence Dashboard\n\n**Growth Metrics** | **Trust Score Analytics** | **Platform Usage** | **Revenue Indicators**"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 2,
+              "width": 12,
+              "height": 8,
+              "properties": {
+                "title": "Growth Trends (7-Day MA)",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "NewAgentRegistrations", { "stat": "Sum" } ],
+                  [ ".", "TrustScoresCalculated", { "stat": "Sum" } ],
+                  [ ".", "VTokensValidated", { "stat": "Sum" } ],
+                  [ ".", "ApiRequestsTotal", { "stat": "Sum" } ]
+                ],
+                "period": 86400,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 2,
+              "width": 12,
+              "height": 8,
+              "properties": {
+                "title": "Trust Score Distribution Analysis",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "TrustTierDistribution", "TrustTier", "Tier 1" ],
+                  [ "...", "Tier 2" ],
+                  [ "...", "Tier 3" ],
+                  [ "...", "Tier 4" ],
+                  [ "...", "Tier 5" ]
+                ],
+                "period": 86400,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "view": "pie"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 10,
+              "width": 24,
+              "height": 8,
+              "properties": {
+                "title": "Platform Utilization Heatmap",
+                "metrics": [
+                  [ "AgentPier/${Stage}", "ApiRequestsTotal", { "stat": "Sum" } ]
+                ],
+                "period": 3600,
+                "region": "${AWS::Region}",
+                "view": "timeSeries",
+                "annotations": {
+                  "horizontal": [
+                    {
+                      "label": "Peak Usage",
+                      "value": 1000,
+                      "fill": "above"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+
+Outputs:
+  
+  ProductionDashboardUrl:
+    Description: "Production Operations Dashboard URL"
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${ProductionDashboard}"
+  
+  BusinessDashboardUrl:
+    Description: "Business Intelligence Dashboard URL"
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${BusinessIntelligenceDashboard}"
+  
+  ProductionAlertsTopicArn:
+    Description: "SNS Topic ARN for production alerts"
+    Value: !Ref ProductionAlertsTopic
+  
+  ProductionMonitoringFunctionName:
+    Description: "Production monitoring Lambda function name"
+    Value: !Ref ProductionMonitoringFunction
