@@ -2,4 +2,4 @@
 # All password hashing uses hashlib.scrypt (stdlib)
 
 # Enhanced rate limiting with Redis
-redis==5.0.1
+redis==7.3.0
