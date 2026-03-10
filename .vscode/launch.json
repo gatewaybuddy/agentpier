@@ -1,0 +1,52 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MCP Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/mcp/server.js",
+            "cwd": "${workspaceFolder}/mcp",
+            "console": "integratedTerminal",
+            "env": {
+                "NODE_ENV": "development",
+                "DEBUG": "mcp:*"
+            },
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "name": "Python Test (Current File)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${fileDirname}"
+        },
+        {
+            "name": "Pytest (Current File)",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["${file}", "-v"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Lambda Function (Local)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/local_invoke.py",
+            "console": "integratedTerminal",
+            "args": ["${input:lambdaFunction}"],
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "lambdaFunction",
+            "description": "Lambda function to invoke",
+            "default": "trust-calculator",
+            "type": "promptString"
+        }
+    ]
+}

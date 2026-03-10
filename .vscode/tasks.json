@@ -1,0 +1,106 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Install MCP Dependencies",
+            "type": "shell",
+            "command": "npm",
+            "args": ["install"],
+            "options": {
+                "cwd": "${workspaceFolder}/mcp"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Test MCP Server",
+            "type": "shell",
+            "command": "npm",
+            "args": ["test"],
+            "options": {
+                "cwd": "${workspaceFolder}/mcp"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Start MCP Server",
+            "type": "shell",
+            "command": "npm",
+            "args": ["start"],
+            "options": {
+                "cwd": "${workspaceFolder}/mcp"
+            },
+            "group": "build",
+            "isBackground": true
+        },
+        {
+            "label": "Validate SAM Template",
+            "type": "shell",
+            "command": "sam",
+            "args": ["validate"],
+            "options": {
+                "cwd": "${workspaceFolder}/infra"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Build SAM Application",
+            "type": "shell", 
+            "command": "sam",
+            "args": ["build"],
+            "options": {
+                "cwd": "${workspaceFolder}/infra"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Deploy SAM Application",
+            "type": "shell",
+            "command": "sam",
+            "args": ["deploy", "--guided"],
+            "options": {
+                "cwd": "${workspaceFolder}/infra"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run Python Tests",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "pytest", "tests/", "-v"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Lint Python Code",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "pylint", "src/"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Format Python Code",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "black", "src/", "tests/"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Security Scan (Bandit)",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "bandit", "-r", "src/"],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test"
+        }
+    ]
+}

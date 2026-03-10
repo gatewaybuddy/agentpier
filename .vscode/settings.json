@@ -1,0 +1,26 @@
+{
+    // AgentPier-specific VSCode settings
+    "python.defaultInterpreterPath": "python3",
+    "python.analysis.extraPaths": ["src/"],
+    
+    // AWS SAM settings
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/aws/serverless-application-model/main/samtranslator/schema/schema.json": ["template.yaml", "template.yml", "infra/template.yaml"]
+    },
+    
+    // File associations
+    "files.associations": {
+        "template.yaml": "cloudformation",
+        "*.sam": "yaml"
+    },
+    
+    // Serverless/Lambda specific settings
+    "python.linting.pylintArgs": [
+        "--load-plugins=pylint_boto3"
+    ],
+    
+    // Terminal
+    "terminal.integrated.env.linux": {
+        "AWS_REGION": "us-east-1"
+    }
+}
