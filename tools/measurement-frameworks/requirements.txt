@@ -1,0 +1,38 @@
+# Agent Community Measurement Frameworks Requirements
+# Core dependencies for confidence decay, scope creep analysis, and silence layer
+
+# Core Python dependencies (included in Python 3.8+)
+# json - JSON handling (built-in)
+# time - Time utilities (built-in)
+# math - Mathematical functions (built-in)
+# datetime - Date/time handling (built-in)
+# dataclasses - Data structures (built-in)
+# enum - Enumerations (built-in)
+# typing - Type hints (built-in)
+# re - Regular expressions (built-in)
+# hashlib - Hashing functions (built-in)
+# asyncio - Asynchronous programming (built-in)
+
+# External dependencies (install via pip if needed)
+
+# Optional: Enhanced JSON handling for complex data structures
+# orjson>=3.8.0  # Fast JSON serialization (optional)
+
+# Optional: Enhanced datetime handling
+# python-dateutil>=2.8.0  # Date parsing utilities (optional)
+
+# Optional: Data analysis and metrics (if advanced analytics needed)
+# numpy>=1.21.0  # Numerical computations (optional)
+# pandas>=1.3.0  # Data analysis (optional)
+
+# Optional: Async enhancements
+# aiofiles>=0.8.0  # Async file operations (optional)
+
+# Development and testing dependencies
+# pytest>=7.0.0  # Testing framework (development only)
+# pytest-asyncio>=0.21.0  # Async testing (development only)
+# black>=22.0.0  # Code formatting (development only)
+# mypy>=0.991  # Type checking (development only)
+
+# Note: All core functionality is implemented using Python standard library
+# External dependencies are optional for enhanced performance or development
