@@ -23,6 +23,7 @@ from utils.score_query import get_agent_signals_all_sources
 from utils.score_response import sanitize_score_response
 from utils.audit import log_signal_access
 from utils.moltbook import fetch_trust_metrics, calculate_trust_score, MoltbookError
+from utils.trust_cache import get_trust_cache, cached_trust_calculation
 
 TABLE_NAME = os.environ.get("TABLE_NAME", "agentpier-dev")
 MOLTBOOK_CACHE_TTL_HOURS = 24
@@ -60,6 +61,10 @@ def _get_agent_events(table, agent_id, limit=200):
 
 def _recalculate_and_store(table, agent_id):
     """Recalculate trust score and update agent profile. Returns updated score dict."""
+    # Invalidate cache for this agent since we're recalculating
+    cache = get_trust_cache()
+    cache.invalidate_agent_cache(agent_id)
+    
     # Fetch profile
     profile_resp = table.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})
     profile = profile_resp.get("Item")
@@ -69,8 +74,8 @@ def _recalculate_and_store(table, agent_id):
     # Fetch events
     events = _get_agent_events(table, agent_id)
 
-    # Calculate
-    score_data = calculate_ace_score(profile, events)
+    # Calculate using cached version
+    score_data = _calculate_trust_score_cached(agent_id, profile, events)
 
     # Update profile with new score
     table.update_item(
@@ -84,6 +89,23 @@ def _recalculate_and_store(table, agent_id):
     )
 
     return score_data
+
+
+@cached_trust_calculation("trust_score")
+def _calculate_trust_score_cached(agent_id: str, profile: dict, events: list):
+    """Cached wrapper for ACE trust score calculation."""
+    return calculate_ace_score(profile, events)
+
+
+@cached_trust_calculation("clearinghouse")
+def _calculate_clearinghouse_score_cached(agent_id: str, signals: list, 
+                                        marketplace_scores: dict, **kwargs):
+    """Cached wrapper for clearinghouse trust score calculation."""
+    return calculate_clearinghouse_score(
+        agent_id=agent_id,
+        signals=signals,
+        marketplace_scores=marketplace_scores,
+    )
 
 
 # === POST /trust/agents ===
@@ -215,6 +237,16 @@ def trust_query(event, context):
         return error("agent_id is required", "validation_error")
 
     table = _get_table()
+    cache = get_trust_cache()
+
+    # Check cache first for performance optimization
+    cached_result = cache.get_trust_score(agent_id)
+    if cached_result:
+        # Add response headers for cache performance tracking
+        return success(
+            cached_result,
+            headers={"X-Trust-Cache": "hit"}
+        )
 
     # Get user profile (AgentPier users are stored as USER# not AGENT#)
     profile_resp = table.get_item(Key={"PK": f"USER#{agent_id}", "SK": "META"})
@@ -226,8 +258,9 @@ def trust_query(event, context):
     # For now, return default score since trust events system isn't fully integrated with user records
     events = []
 
-    # Return default trust score breakdown when no trust events exist
-    trust_score = float(profile.get("trust_score", 0.0))
+    # Calculate trust score with caching
+    trust_calculation = _calculate_trust_score_cached(agent_id, profile, events)
+    trust_score = trust_calculation.get("trust_score", float(profile.get("trust_score", 0.0)))
 
     # Build default ACE score breakdown
     default_axes = {"autonomy": 0.0, "competence": 0.0, "experience": 0.0}
@@ -455,6 +488,29 @@ def trust_clearinghouse_score(event, context):
         return error("agent_id is required", "validation_error")
 
     table = _get_table()
+    cache = get_trust_cache()
+
+    # Check cache first for performance optimization
+    cached_result = cache.get_clearinghouse_score(agent_id)
+    if cached_result:
+        # Add agent_id and sanitize
+        cached_result["agent_id"] = agent_id
+        sanitized = sanitize_score_response(cached_result)
+        
+        # Audit log for cached result
+        ip = event.get("requestContext", {}).get("identity", {}).get("sourceIp", "")
+        log_signal_access(
+            accessor_id="public",
+            accessor_type="system",
+            agent_id=agent_id,
+            action="clearinghouse_score_query_cached",
+            ip_address=ip,
+        )
+        
+        return success(
+            sanitized,
+            headers={"X-Trust-Cache": "hit"}
+        )
 
     # Verify agent exists (check both AGENT# and USER# patterns)
     profile_resp = table.get_item(Key={"PK": f"AGENT#{agent_id}", "SK": "PROFILE"})
@@ -471,8 +527,8 @@ def trust_clearinghouse_score(event, context):
     # Fetch marketplace trust scores for source weighting
     marketplace_scores = _get_marketplace_scores(table)
 
-    # Calculate clearinghouse score
-    score_data = calculate_clearinghouse_score(
+    # Calculate clearinghouse score with caching
+    score_data = _calculate_clearinghouse_score_cached(
         agent_id=agent_id,
         signals=signals,
         marketplace_scores=marketplace_scores,
