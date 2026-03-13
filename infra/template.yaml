@@ -76,6 +76,7 @@ Resources:
       FunctionName: !Sub agentpier-create-listing-${Stage}
       Handler: handlers.listings.create_listing
       CodeUri: ../src/
+      MemorySize: 384
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgentPierTable
@@ -93,6 +94,7 @@ Resources:
       FunctionName: !Sub agentpier-get-listing-${Stage}
       Handler: handlers.listings.get_listing
       CodeUri: ../src/
+      MemorySize: 512
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref AgentPierTable
@@ -110,6 +112,7 @@ Resources:
       FunctionName: !Sub agentpier-search-listings-${Stage}
       Handler: handlers.listings.search_listings
       CodeUri: ../src/
+      MemorySize: 512
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref AgentPierTable
@@ -195,6 +198,7 @@ Resources:
       FunctionName: !Sub agentpier-get-me-${Stage}
       Handler: handlers.auth.get_me
       CodeUri: ../src/
+      MemorySize: 512
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgentPierTable
@@ -394,6 +398,7 @@ Resources:
       FunctionName: !Sub agentpier-trust-register-${Stage}
       Handler: handlers.trust.trust_register
       CodeUri: ../src/
+      MemorySize: 384
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgentPierTable
@@ -428,6 +433,7 @@ Resources:
       FunctionName: !Sub agentpier-trust-query-${Stage}
       Handler: handlers.trust.trust_query
       CodeUri: ../src/
+      MemorySize: 512
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref AgentPierTable
@@ -504,6 +510,7 @@ Resources:
       FunctionName: !Sub agentpier-create-transaction-${Stage}
       Handler: handlers.transactions.create_transaction
       CodeUri: ../src/
+      MemorySize: 384
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref AgentPierTable
@@ -760,6 +767,7 @@ Resources:
       FunctionName: !Sub agentpier-get-marketplace-score-${Stage}
       Handler: handlers.marketplace.get_marketplace_score
       CodeUri: ../src/
+      MemorySize: 384
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref AgentPierTable
@@ -887,6 +895,7 @@ Resources:
       FunctionName: !Sub agentpier-verify-badge-${Stage}
       Handler: handlers.badges.verify_badge
       CodeUri: ../src/
+      MemorySize: 512
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref AgentPierTable
@@ -1665,6 +1674,11 @@ Resources:
             }
           ]
         }
+
+  # ============================================
+  # Provisioned Concurrency for High-Traffic Functions  
+  # ============================================
+  
 
 Outputs:
   ApiUrl:
