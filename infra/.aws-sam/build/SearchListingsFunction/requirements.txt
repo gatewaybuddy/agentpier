@@ -1,2 +1,0 @@
-# boto3 is included in Lambda runtime — no external deps needed
-# All password hashing uses hashlib.scrypt (stdlib)
