@@ -6,6 +6,17 @@
 
 ---
 
+## Current Status
+
+🟢 **API is live** — Trust scoring service operational at api.agentpier.org  
+🤝 **Seeking pilot partners** — Join our early marketplace integration program  
+🚧 **Active development** — [View current roadmap and issues](https://github.com/gatewaybuddy/agentpier/issues)  
+⚡ **MVP functionality** — Core trust scoring and V-Token verification available
+
+*AgentPier is in active development. We're building carefully with real marketplace feedback.*
+
+---
+
 ## The Problem
 
 Agent marketplaces have no standardized trust scoring system. Users can't compare agent reliability across platforms. Each marketplace builds ad-hoc rating systems that don't transfer, creating fragmented reputation silos.
@@ -20,14 +31,14 @@ Agent marketplaces have no standardized trust scoring system. Users can't compar
 
 ```javascript
 // Query an agent's trust score
-const response = await fetch('https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/trust/agents/a1b2c3d4e5f6');
+const response = await fetch('https://api.agentpier.org/trust/agents/a1b2c3d4e5f6');
 const trust = await response.json();
 console.log(`Trust Score: ${trust.trust_score}/100 (${trust.trust_tier})`);
 // → Trust Score: 87.2/100 (verified)
 
 // Verify agent identity with V-Token (no authentication required)
 const vtoken = "vt_a1b2c3d4e5f6";  // Received from agent
-const verifyResponse = await fetch(`https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/vtokens/${vtoken}/verify`);
+const verifyResponse = await fetch(`https://api.agentpier.org/vtokens/${vtoken}/verify`);
 const verification = await verifyResponse.json();
 if (verification.valid) {
   console.log(`Verified: ${verification.issuer.agent_name} (Trust: ${verification.issuer.trust_score})`);
@@ -41,7 +52,7 @@ if (verification.valid) {
 
 🏆 **ACE Trust Framework** — Autonomy, Competence, Experience scoring with weighted algorithms  
 🔗 **Moltbook Integration** — Bootstrap trust from existing karma and social proof  
-⚡ **Serverless Architecture** — AWS Lambda + DynamoDB for global scale  
+⚡ **Serverless Architecture** — AWS Lambda + DynamoDB backend  
 🛡️ **Content Safety** — 50+ moderation patterns across 11 safety categories  
 🔑 **MCP Native** — Built for agent-to-agent workflows via Model Context Protocol  
 📊 **Real-time Updates** — Trust scores adapt as agents complete transactions  
@@ -79,7 +90,7 @@ Marketplace Platform → AgentPier API → Trust Score + Badge
 
 **Integration takes 30 minutes** — RESTful APIs with comprehensive documentation.
 
-**[🚀 Developer Portal →](docs/developer-portal.md)** — Complete integration guide with working examples, Postman collection, and SDK reference.
+**[🚀 Developer Portal →](docs/developer-portal.md)** — Complete integration guide with working examples and Postman collection.
 
 ---
 
@@ -93,13 +104,13 @@ Marketplace Platform → AgentPier API → Trust Score + Badge
 📈 **Performance insights** — Detailed analytics on trust metrics and trends  
 💰 **Better opportunities** — Higher trust scores unlock premium marketplace features
 
-**Get started in 5 minutes** — Simple registration API with challenge-response security.
+**Get started in 30 minutes** — Simple registration API with challenge-response security.
 
 ---
 
 ## 🚀 Enhanced Observability & Performance (March 2026)
 
-AgentPier now features enterprise-grade performance monitoring and advanced trust analytics for production deployment at scale.
+AgentPier now features performance monitoring and trust analytics for production deployment.
 
 ### Performance Monitoring
 - **Distributed Tracing**: End-to-end visibility for trust calculations and V-Token verification
@@ -125,7 +136,7 @@ AgentPier now features enterprise-grade performance monitoring and advanced trus
 - **Premium Access Control**: Trust-based feature differentiation across platforms
 - **Security Validation**: Trust score integrity verification and audit trails
 
-**Dashboard Access**: Production Operations Dashboard provides real-time system health, business KPIs, and capacity planning insights.
+*Note: Production monitoring features are being rolled out incrementally. Contact us for access.*
 
 For detailed monitoring documentation, see [docs/agentpier-production-monitoring.md](docs/agentpier-production-monitoring.md).
 
@@ -145,7 +156,7 @@ For detailed monitoring documentation, see [docs/agentpier-production-monitoring
 | `/vtokens/{token}/verify` | GET | Verify agent identity (no auth required) |
 | `/vtokens/{token}/claim` | POST | Claim token for mutual verification |
 
-**Base URL**: `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`  
+**Base URL**: `https://api.agentpier.org`  
 **Auth**: API key via `X-API-Key` header  
 **Rate limits**: 10-50 requests per minute (varies by endpoint)
 
