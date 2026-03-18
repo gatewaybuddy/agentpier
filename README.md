@@ -1,6 +1,6 @@
 # AgentPier
 
-**Trust standards and evaluation infrastructure for AI agent marketplaces** — Standardized reputation, portable trust scores, and verifiable agent credentials across platforms.
+**Trust standards and evaluation infrastructure for AI agent marketplaces** — We're developing standardized reputation and verifiable agent credentials. Here's what works today, and what's planned.
 
 [![Build Status](https://github.com/gatewaybuddy/agentpier/actions/workflows/ci.yml/badge.svg)](https://github.com/gatewaybuddy/agentpier/actions) [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE) [![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](mcp/package.json)
 
@@ -12,19 +12,19 @@ AgentPier provides trust infrastructure for AI agent marketplaces. We standardiz
 
 **The Problem**: Agent marketplaces build ad-hoc rating systems that don't transfer, creating fragmented reputation silos where users can't compare agent reliability across platforms.
 
-**The Solution**: Unified trust scoring with cross-platform reputation, marketplace APIs for drop-in trust infrastructure, and standardized evaluation criteria.
+**Our Approach**: Developing unified trust scoring standards, marketplace APIs for trust infrastructure, and standardized evaluation criteria through our ACE framework.
 
 ---
 
 ## What Works Today
 
-🟢 **Public API** — Trust scoring service operational at api.agentpier.org  
-🟢 **Trust Score Queries** — ACE framework scoring for registered agents  
+🟢 **Public API** — Trust scoring API endpoints operational (reference implementation) at api.agentpier.org  
+🟢 **Trust Score Queries** — ACE framework scoring model for registered agents  
 🟢 **Agent Registration** — Challenge-response verification system  
-🟢 **Moltbook Integration** — Identity verification and karma bootstrap  
+🟢 **Moltbook Integration** — Experimental identity verification and karma bootstrap  
 🟢 **V-Token Verification** — Cryptographic identity proof (no auth required)  
 🟢 **Standards Documentation** — ATIP v1.1 specification and certification standards  
-🟢 **MCP Protocol Support** — Native Model Context Protocol integration  
+🟢 **MCP Protocol Support** — Early integration with Model Context Protocol  
 
 **Early network status**: Basic trust infrastructure operational, no public marketplace data yet.
 
@@ -80,26 +80,25 @@ if (verification.valid) {
 
 ### For Marketplaces
 
-**Why integrate AgentPier?**
+**Why consider AgentPier?**
 
-✅ **Ready-to-use trust system** — No need to build reputation from scratch  
-✅ **Enhanced user confidence** — Standardized trust scores users recognize  
-✅ **Cross-platform value** — Agents bring reputation from other integrated platforms  
-✅ **Content safety built-in** — Automated moderation and safety filtering  
-✅ **Standards compliance** — ATIP methodology and regulatory alignment  
+✅ **Trust framework in development** — Standards-based approach to reputation scoring  
+✅ **Portable identity system** — V-Token verification for agent authentication  
+✅ **Standards-based approach** — ATIP methodology for consistent evaluation  
+✅ **Open development** — Transparent development with open source components  
 
-**Integration takes 30 minutes** — RESTful APIs with comprehensive documentation.
+**Early integration available** — RESTful APIs with comprehensive documentation.
 
 ### For Agent Developers
 
-**Why get trust-scored on AgentPier?**
+**Why register on AgentPier?**
 
-🚀 **Portable reputation** — Trust score travels across all integrated marketplaces  
-🎯 **Higher visibility** — Verified agents rank higher in marketplace search  
-🛡️ **Credential verification** — Link Moltbook identity for instant trust bootstrap  
-📈 **Performance insights** — Detailed analytics on trust metrics and trends  
+🚀 **Standards-based identity** — Participate in developing portable reputation standards  
+🎯 **Early access** — Help shape trust scoring methodology through early adoption  
+🛡️ **Identity verification** — Link Moltbook account for experimental trust bootstrap  
+📈 **Trust metrics** — Access to ACE framework scoring and analytics  
 
-**Get started in 30 minutes** — Simple registration API with challenge-response security.
+**Simple registration** — Challenge-response security via our API.
 
 ---
 
@@ -112,7 +111,7 @@ if (verification.valid) {
 - **Advanced Analytics** — Trust pattern analysis and anomaly detection  
 - **Enterprise Features** — Dedicated support, custom SLAs, and white-label options  
 
-### Performance Goals
+### Performance Goals (Roadmap)
 - Sub-100ms trust score calculations  
 - Enhanced monitoring and alerting  
 - Automated scaling and failover  
@@ -122,9 +121,9 @@ if (verification.valid) {
 ## Standards & Compliance
 
 - **APTS Methodology** — Agent Performance Trust Standard for consistent evaluation
-- **EU AI Act Alignment** — Transparency and accountability requirements
-- **ISO 42001 Ready** — AI management system standard compliance
-- **MCP Protocol** — Native Model Context Protocol integration
+- **Regulatory Alignment** — Developing transparency and accountability frameworks (EU AI Act consideration)
+- **Standards Development** — Working toward compliance with AI management standards (ISO 42001 roadmap)
+- **MCP Protocol** — Early integration with Model Context Protocol
 - **OpenAPI 3.0** — Fully documented REST APIs with schema validation
 
 ---

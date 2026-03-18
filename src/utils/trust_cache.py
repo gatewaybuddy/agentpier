@@ -17,7 +17,14 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 
 import boto3
-import redis
+
+# Conditional redis import for graceful degradation
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None
 
 # Cache configuration
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -78,6 +85,11 @@ class TrustCache:
     
     def _init_redis(self):
         """Initialize Redis connection with error handling."""
+        if not REDIS_AVAILABLE:
+            # Redis package not installed, skip caching
+            self.redis_client = None
+            return
+            
         try:
             self.redis_client = redis.Redis(
                 host=REDIS_HOST,

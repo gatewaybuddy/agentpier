@@ -15,7 +15,7 @@ STANDARDS_EFFECTIVE_DATE = "2026-03-04"
 AGENT_STANDARDS = {
     "version": STANDARDS_VERSION,
     "effective_date": STANDARDS_EFFECTIVE_DATE,
-    "document_url": "/docs/certification-standards-v1.md",
+    "document_url": "https://github.com/gatewaybuddy/agentpier/blob/main/docs/certification-standards-v1.md",
     "categories": {
         "reliability": {
             "name": "Reliability",
@@ -239,7 +239,7 @@ AGENT_STANDARDS = {
 MARKETPLACE_STANDARDS = {
     "version": STANDARDS_VERSION,
     "effective_date": STANDARDS_EFFECTIVE_DATE,
-    "document_url": "/docs/marketplace-standards-v1.md",
+    "document_url": "https://github.com/gatewaybuddy/agentpier/blob/main/docs/marketplace-standards-v1.md",
     "dimensions": {
         "data_quality": {
             "name": "Data Quality",
@@ -471,7 +471,7 @@ def get_standards_current(event, context):
             "standards": {
                 "agent": {
                     "version": STANDARDS_VERSION,
-                    "document_url": "/docs/certification-standards-v1.md",
+                    "document_url": "https://github.com/gatewaybuddy/agentpier/blob/main/docs/certification-standards-v1.md",
                     "api_url": "/standards/agent",
                     "categories": [
                         "reliability",
@@ -482,7 +482,7 @@ def get_standards_current(event, context):
                 },
                 "marketplace": {
                     "version": STANDARDS_VERSION,
-                    "document_url": "/docs/marketplace-standards-v1.md",
+                    "document_url": "https://github.com/gatewaybuddy/agentpier/blob/main/docs/marketplace-standards-v1.md",
                     "api_url": "/standards/marketplace",
                     "dimensions": [
                         "data_quality",

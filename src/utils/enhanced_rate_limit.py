@@ -15,7 +15,14 @@ from typing import Dict, List, Tuple, Optional
 from datetime import datetime, timezone
 
 import boto3
-import redis
+
+# Conditional redis import for graceful degradation
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None
 
 from utils.ace_scoring import get_trust_tier
 from utils.response import error, too_many_requests
@@ -117,6 +124,11 @@ class RateLimiter:
     
     def _init_redis(self):
         """Initialize Redis connection with error handling."""
+        if not REDIS_AVAILABLE:
+            # Redis package not installed, use DynamoDB fallback
+            self.redis_client = None
+            return
+            
         try:
             self.redis_client = redis.Redis(
                 host=REDIS_HOST,

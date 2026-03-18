@@ -106,6 +106,23 @@ def too_many_requests(
     }
 
 
+def redirect(location: str, status_code: int = 302) -> dict:
+    """Return a redirect response."""
+    return {
+        "statusCode": status_code,
+        "headers": {
+            **_cors_headers(),
+            "Location": location,
+        },
+        "body": json.dumps(
+            {
+                "message": f"Redirecting to {location}",
+                "location": location,
+            }
+        ),
+    }
+
+
 def handler(fn):
     """Decorator that wraps Lambda handlers with error logging and trace IDs."""
 

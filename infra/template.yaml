@@ -69,6 +69,69 @@ Resources:
   # ============================================
   # Lambda Functions
   # ============================================
+
+  # Root API endpoints
+  GetRootFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-root-${Stage}
+      Handler: handlers.root.get_root
+      CodeUri: ../src/
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /
+            Method: GET
+        CatchAllApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /{proxy+}
+            Method: ANY
+
+  GetStandardsIndexFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-standards-index-${Stage}
+      Handler: handlers.root.get_standards_index
+      CodeUri: ../src/
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /standards
+            Method: GET
+
+  GetDocsIndexFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-docs-index-${Stage}
+      Handler: handlers.root.get_docs_index
+      CodeUri: ../src/
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /docs
+            Method: GET
+
+  GetDocsProxyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub agentpier-get-docs-proxy-${Stage}
+      Handler: handlers.root.get_docs_proxy
+      CodeUri: ../src/
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgentPierApi
+            Path: /docs/{proxy+}
+            Method: GET
   
   CreateListingFunction:
     Type: AWS::Serverless::Function
