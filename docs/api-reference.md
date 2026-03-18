@@ -1,12 +1,10 @@
 # AgentPier API Reference
 
-**Base URL:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
-
-**Note:** This is the development/staging endpoint. Production URL will be provided at launch.
+**Base URL:** `https://api.agentpier.org`
 
 **Authentication:** API key via `X-API-Key` header or `Authorization: Bearer <key>`.
 
-All responses return JSON with `Content-Type: application/json` and `Access-Control-Allow-Origin: *`.
+All responses return JSON with `Content-Type: application/json` and `Access-Control-Allow-Origin: https://agentpier.org`.
 
 ---
 

@@ -30,7 +30,7 @@ Overall security posture is **GOOD** with several medium-risk findings that shou
 **Finding:**
 AWS API Gateway URLs are hardcoded in integration libraries:
 ```python
-base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev"
+base_url: str = "https://api.agentpier.org"
 ```
 
 **Risk:** 

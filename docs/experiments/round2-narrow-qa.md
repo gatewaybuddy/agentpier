@@ -7,7 +7,7 @@
 ---
 
 ## Test Environment
-- **API:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
+- **API:** `https://api.agentpier.org`
 - **Blocker:** Registration rate limit (5/hour/IP) was exhausted by prior round-2 agents. Happy-path tests (1-6, 9-10) could not execute. Error-path tests (7-8) completed.
 
 ## Test Results

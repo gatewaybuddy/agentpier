@@ -1,6 +1,6 @@
 # AgentPier E2E Dogfood Test - Round 3
 **Date:** February 21, 2026  
-**API Base URL:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`  
+**API Base URL:** `https://api.agentpier.org`  
 **Test Agent:** e2e_final_test (and variants)  
 **Status:** **CRITICAL FAILURE** - Registration endpoint broken  
 

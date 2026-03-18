@@ -1,7 +1,7 @@
 # AgentPier E2E Dogfood Test - Final Round
 
 **Date**: 2026-02-21 19:35 EST  
-**API Base URL**: `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`  
+**API Base URL**: `https://api.agentpier.org`  
 **Test Username**: `e2e_final_7463`  
 
 ## Main Test Flow

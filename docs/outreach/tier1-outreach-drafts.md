@@ -21,7 +21,7 @@ As an open source founder building in the agent space, I wanted to run something
 
 Monitoring shows what happened. Trust scoring shows if you should believe it.
 
-I built AgentPier (api.agentpier.org) to be "FICO for agents" — transparent standards, proprietary scoring. It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act), with a data firewall so raw signals never cross marketplace boundaries.
+I built AgentPier (api.agentpier.org) to be trust standards and evaluation infrastructure — transparent standards, proprietary scoring. It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act), with a data firewall so raw signals never cross marketplace boundaries.
 
 The EU AI Act high-risk rules hit in 5 months. Your enterprise customers will need this.
 
@@ -52,7 +52,7 @@ LangSmith does individual run evaluation incredibly well. But I've been thinking
 
 That's why I built AgentPier — cross-platform trust scoring for AI agents. While LangSmith evaluates "did this run work?", AgentPier answers "should I trust this agent in my production workflow?"
 
-It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act compliance), with a live API at api.agentpier.org. The "FICO for agents" concept with transparent standards but proprietary scoring algorithms.
+It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act compliance), with a live API at api.agentpier.org. The trust standards and evaluation infrastructure concept with transparent standards but proprietary scoring algorithms.
 
 I see a natural integration point: LangSmith users who deploy to production need both run evaluation AND reputation scoring. With EU AI Act high-risk rules hitting August 2026, this becomes compliance infrastructure, not just nice-to-have.
 
@@ -83,7 +83,7 @@ Zapier has built an incredible automation marketplace — 8,000+ app integration
 
 But here's the gap I'm seeing: your enterprise customers need to trust the agents they're deploying in their business-critical workflows. How do they choose which agents to trust?
 
-AgentPier solves this — trust infrastructure for AI agent marketplaces. Think "FICO for agents" with transparent standards and proprietary scoring. It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act), with a data firewall so raw signals never cross marketplace boundaries.
+AgentPier solves this — trust infrastructure for AI agent marketplaces. Think trust standards and evaluation infrastructure with transparent standards and proprietary scoring. It's Apache 2.0, standards-backed (NIST AI RMF, EU AI Act), with a data firewall so raw signals never cross marketplace boundaries.
 
 The EU AI Act high-risk rules hit in 5 months. Your enterprise customers will need this for compliance.
 
@@ -114,7 +114,7 @@ As a fellow open source founder, I admire what you've built with HuggingFace —
 
 But I've been thinking about the production deployment gap. Community trust signals (likes, downloads, stars) are great for discovery, but enterprises deploying HuggingFace models in production need deeper trust infrastructure.
 
-That's why I built AgentPier — "FICO for agents" but for the entire AI ecosystem. It's Apache 2.0 (open source ethos alignment), standards-backed (NIST AI RMF, EU AI Act), with a live API at api.agentpier.org.
+That's why I built AgentPier — trust standards and evaluation infrastructure but for the entire AI ecosystem. It's Apache 2.0 (open source ethos alignment), standards-backed (NIST AI RMF, EU AI Act), with a live API at api.agentpier.org.
 
 The interesting part: we evaluate model behavior across platforms, not just community metrics. Real trust signals from actual deployments, with a data firewall so raw signals stay within marketplace boundaries.
 

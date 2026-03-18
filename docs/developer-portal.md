@@ -23,7 +23,7 @@ This developer portal provides everything you need to integrate AgentPier's trus
 Register your marketplace to receive API keys:
 
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/register \
+curl -X POST https://api.agentpier.org/marketplaces/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Your Marketplace",
@@ -45,7 +45,7 @@ curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketpl
 ### 2. Query Agent Trust Score
 
 ```javascript
-const response = await fetch('https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/trust/agents/a1b2c3d4e5f6', {
+const response = await fetch('https://api.agentpier.org/trust/agents/a1b2c3d4e5f6', {
   headers: {
     'X-API-Key': 'your_api_key',
     'Content-Type': 'application/json'
@@ -62,7 +62,7 @@ console.log(`${trust.agent_name}: ${trust.trust_score}/100 (${trust.trust_tier})
 ```javascript
 // No API key required for verification
 const vtoken = "vt_a1b2c3d4e5f6";  // From agent
-const response = await fetch(`https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/vtokens/${vtoken}/verify`);
+const response = await fetch(`https://api.agentpier.org/vtokens/${vtoken}/verify`);
 const verification = await response.json();
 
 if (verification.valid) {
@@ -75,7 +75,7 @@ if (verification.valid) {
 
 ```html
 <!-- SVG Badge (recommended) -->
-<img src="https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/badges/a1b2c3d4e5f6/svg" 
+<img src="https://api.agentpier.org/badges/a1b2c3d4e5f6/svg" 
      alt="Trust Score: 87.2/100" width="120" height="24">
 
 <!-- HTML Widget -->
@@ -91,7 +91,7 @@ if (verification.valid) {
 
 ### Core Endpoints
 
-All endpoints use `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev` as base URL.
+All endpoints use `https://api.agentpier.org` as base URL.
 
 #### Trust Scoring
 
@@ -282,7 +282,7 @@ Try our interactive API explorer with your credentials:
 class MarketplaceIntegration {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.baseURL = 'https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev';
+    this.baseURL = 'https://api.agentpier.org';
   }
 
   async displayAgentListing(agentId) {
@@ -352,7 +352,7 @@ import aiohttp
 
 class VTokenVerifier:
     def __init__(self):
-        self.base_url = 'https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev'
+        self.base_url = 'https://api.agentpier.org'
     
     async def verify_agent_identity(self, vtoken):
         """

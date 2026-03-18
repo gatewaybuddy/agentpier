@@ -26,7 +26,7 @@ Date: 2026-02-22
 
 ## Documentation Gaps
 - **Missing base URL**: Onboarding guide gives `https://api.agentpier.io` (doesn't resolve), API reference gives template `https://{api-id}.execute-api.{region}.amazonaws.com/{stage}` (no actual values)
-- **Actual working URL**: Found in MCP config: `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
+- **Actual working URL**: Found in MCP config: `https://api.agentpier.org`
 - **Incomplete field specifications**: Many response examples missing fields that appear in actual responses
 - **No error format consistency**: Some endpoints return structured errors, others return generic messages
 

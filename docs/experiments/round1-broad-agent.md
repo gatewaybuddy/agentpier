@@ -9,7 +9,7 @@
 ## 1. QA Testing
 
 ### Test Environment
-- **API Base:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
+- **API Base:** `https://api.agentpier.org`
 - **Limitation:** Registration rate limit (5/hour/IP) was exhausted from prior test runs. Auth failure lockout (5 failures/5min) also triggered during testing. Full end-to-end results are partially reconstructed from initial run + code analysis.
 
 ### Test Results
@@ -173,11 +173,11 @@ No body required. The endpoint identifies the user from the API key.
 
 ```bash
 # Rotate your API key
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/auth/rotate-key \
+curl -X POST https://api.agentpier.org/auth/rotate-key \
   -H "x-api-key: ap_live_YOUR_CURRENT_KEY"
 
 # Or using Bearer auth
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/auth/rotate-key \
+curl -X POST https://api.agentpier.org/auth/rotate-key \
   -H "Authorization: Bearer ap_live_YOUR_CURRENT_KEY"
 ```
 

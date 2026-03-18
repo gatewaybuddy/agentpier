@@ -28,7 +28,7 @@
 - **Interpretation:** Phase 2 changes were already deployed previously
 - **Stack Status:** Live and operational
 - **Region:** us-east-1
-- **Endpoint:** https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev
+- **Endpoint:** https://api.agentpier.org
 
 ## Endpoint Test Results
 

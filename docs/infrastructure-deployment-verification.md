@@ -11,7 +11,7 @@
 - **Region**: us-east-1
 
 ### Deployed Infrastructure
-- **API Gateway**: `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
+- **API Gateway**: `https://api.agentpier.org`
 - **DynamoDB Table**: `agentpier-dev`
 - **S3 Frontend Bucket**: `agentpier-frontend-dev`
 - **Lambda Functions**: 52 functions deployed
@@ -97,7 +97,7 @@ sam deploy --config-env dev
 
 # 3. Verify deployment
 aws cloudformation describe-stacks --stack-name agentpier-dev
-curl https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/
+curl https://api.agentpier.org/
 ```
 
 ### Production Deployment

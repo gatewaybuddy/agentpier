@@ -1,7 +1,7 @@
 # AgentPier End-to-End Documentation Verification Report
 **Date:** February 22, 2026  
 **Tester:** Automated E2E Verification Agent  
-**API Base URL:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`
+**API Base URL:** `https://api.agentpier.org`
 
 ## Executive Summary
 

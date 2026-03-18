@@ -2,7 +2,7 @@
 
 **Date:** February 17, 2026  
 **Tester:** Automated subagent  
-**API Base:** https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev  
+**API Base:** https://api.agentpier.org  
 **MCP Server:** /mnt/d/Projects/agentpier/mcp/server.js v0.1.0  
 
 ## Executive Summary

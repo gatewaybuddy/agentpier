@@ -20,7 +20,7 @@ This directory contains comprehensive examples and tools for integrating AgentPi
 Get your API key by registering your marketplace:
 
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/register \
+curl -X POST https://api.agentpier.org/marketplaces/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Your Marketplace",

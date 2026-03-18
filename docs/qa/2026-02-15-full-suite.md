@@ -1,7 +1,7 @@
 # AgentPier QA Test Suite — 2026-02-15
 
 **Run time:** 2026-02-15 01:14:13 EST  
-**API:** `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev`  
+**API:** `https://api.agentpier.org`  
 **Result:** 31 PASS / 8 FAIL / 7 WARN (46 total)
 
 ---

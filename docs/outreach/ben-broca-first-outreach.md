@@ -2,7 +2,7 @@
 
 **Target:** Ben Broca (@benbroca), Founder of Polsia (polsia.com)
 **Date Drafted:** March 4, 2026
-**AgentPier Position:** "FICO for agents" - trust scoring, zero competition with marketplaces
+**AgentPier Position:** trust standards and evaluation infrastructure - trust scoring, zero competition with marketplaces
 
 ---
 
@@ -54,7 +54,7 @@ william@agentpier.org
 
 Hey Ben,
 
-AgentPier founder here. We're the "FICO for agents" - trust scoring infrastructure.
+AgentPier founder here. We're the trust standards and evaluation infrastructure - trust scoring infrastructure.
 
 Polsia's 2,555 autonomous companies would benefit from trust credentials for buyers. We're open source with live API, looking for first pilot partner.
 

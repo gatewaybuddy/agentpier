@@ -60,7 +60,7 @@ ap.trust.report_event(agent_id, event)
 **Evidence:**
 ```python
 # BAD: Hardcoded AWS URL
-base_url: str = "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev"
+base_url: str = "https://api.agentpier.org"
 
 # GOOD: Should use clean domain  
 base_url: str = "https://api.agentpier.org"
@@ -122,7 +122,7 @@ self.api_key = api_key  # Should validate format
 
 **Issue:** Inconsistent API URLs across components:
 - SDK defaults to: `https://api.agentpier.org` ✓
-- OpenAPI spec shows: `https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev` ❌
+- OpenAPI spec shows: `https://api.agentpier.org` ❌
 - Integrations default to: AWS URL ❌
 - Landing page references: `https://api.agentpier.org` ✓
 

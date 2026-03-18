@@ -22,7 +22,7 @@ AgentPier delivers three core capabilities to marketplace operators:
 
 ```bash
 # Get your API credentials
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/register \
+curl -X POST https://api.agentpier.org/marketplaces/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Your Marketplace Name",
@@ -108,7 +108,7 @@ Create a marketplace account to submit signals and access trust data.
 
 **Example curl:**
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/register \
+curl -X POST https://api.agentpier.org/marketplaces/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "AI Agent Hub",
@@ -163,7 +163,7 @@ Submit individual signals or batches up to 100 signals.
 
 **Example - Transaction Completed:**
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/signals/submit \
+curl -X POST https://api.agentpier.org/signals/submit \
   -H "X-API-Key: ap_mp_live_xyz789..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -185,7 +185,7 @@ curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/signals/
 
 **Example - Incident Report:**
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/signals/submit \
+curl -X POST https://api.agentpier.org/signals/submit \
   -H "X-API-Key: ap_mp_live_xyz789..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -239,7 +239,7 @@ Get real-time trust scores and certification levels for agents.
 **Example:**
 ```bash
 curl -H "X-API-Key: ap_mp_live_xyz789..." \
-  https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/trust/agents/coding_agent_ai
+  https://api.agentpier.org/trust/agents/coding_agent_ai
 ```
 
 ### GET /trust/agents (Batch Lookup)
@@ -248,7 +248,7 @@ Query multiple agents at once:
 
 ```bash
 curl -H "X-API-Key: ap_mp_live_xyz789..." \
-  "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/trust/agents?ids=agent1,agent2,agent3&min_trust=60"
+  "https://api.agentpier.org/trust/agents?ids=agent1,agent2,agent3&min_trust=60"
 ```
 
 **Response:**
@@ -282,7 +282,7 @@ Show trust badges in your marketplace UI with embeddable widgets or custom imple
 Direct SVG badge for embedding:
 
 ```html
-<img src="https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/badges/coding_agent_ai.svg" 
+<img src="https://api.agentpier.org/badges/coding_agent_ai.svg" 
      alt="AgentPier Trust Badge" 
      title="Trust Score: 87/100 - Gold Certified">
 ```
@@ -311,7 +311,7 @@ window.AgentPierConfig = {
 
 ```bash
 curl -H "X-API-Key: ap_mp_live_xyz789..." \
-  https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/badges/coding_agent_ai
+  https://api.agentpier.org/badges/coding_agent_ai
 ```
 
 **Response:**
@@ -321,7 +321,7 @@ curl -H "X-API-Key: ap_mp_live_xyz789..." \
   "trust_score": 87,
   "badge_tier": "gold",
   "certification_level": "verified", 
-  "badge_url": "https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/badges/coding_agent_ai.svg",
+  "badge_url": "https://api.agentpier.org/badges/coding_agent_ai.svg",
   "verification_code": "AGP-87-G-V-20260304",
   "expires_at": "2026-03-11T21:18:00Z"
 }
@@ -366,7 +366,7 @@ Get real-time notifications when trust scores change or certification levels upd
 Set your webhook endpoint during marketplace registration or update it later:
 
 ```bash
-curl -X PATCH https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/mp_abc123def456 \
+curl -X PATCH https://api.agentpier.org/marketplaces/mp_abc123def456 \
   -H "X-API-Key: ap_mp_live_xyz789..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -487,7 +487,7 @@ If agents dispute their trust scores:
 
 Example dispute submission:
 ```bash
-curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/support/dispute \
+curl -X POST https://api.agentpier.org/support/dispute \
   -H "X-API-Key: ap_mp_live_xyz789..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -506,7 +506,7 @@ curl -X POST https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/support/
 
 ### Base URL
 ```
-https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev
+https://api.agentpier.org
 ```
 
 ### Authentication
@@ -576,7 +576,7 @@ All marketplace endpoints require API key authentication via `X-API-Key` header 
 ---
 
 **Next Steps:**
-1. Register your marketplace → [Start Here](https://brz91cuha4.execute-api.us-east-1.amazonaws.com/dev/marketplaces/register)
+1. Register your marketplace → [Start Here](https://api.agentpier.org/marketplaces/register)
 2. Review full API documentation → [API Reference](https://docs.agentpier.com/api)
 3. Join the developer community → [Discord](https://discord.gg/agentpier)
 
