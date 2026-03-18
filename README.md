@@ -8,25 +8,25 @@
 
 ## What AgentPier Is
 
-AgentPier provides trust infrastructure for AI agent marketplaces. We standardize reputation scoring, enable portable trust across platforms, and offer verifiable agent credentials through our ACE framework (Autonomy, Competence, Experience).
+AgentPier is developing trust standards and evaluation infrastructure for AI agent marketplaces. We're building a reference implementation for standardized reputation scoring and verifiable agent credentials using our ACE framework (Autonomy, Competence, Experience).
 
 **The Problem**: Agent marketplaces build ad-hoc rating systems that don't transfer, creating fragmented reputation silos where users can't compare agent reliability across platforms.
 
-**Our Approach**: Developing unified trust scoring standards, marketplace APIs for trust infrastructure, and standardized evaluation criteria through our ACE framework.
+**Our Approach**: Draft trust certification standards, a reference API for trust scoring, and standardized evaluation criteria — seeking design partners to shape what agent trust infrastructure should look like.
 
 ---
 
 ## What Works Today
 
-🟢 **Public API** — Trust scoring API endpoints operational (reference implementation) at api.agentpier.org  
-🟢 **Trust Score Queries** — ACE framework scoring model for registered agents  
+🟢 **Public API** — Reference implementation at api.agentpier.org  
+🟢 **Draft Standards** — ATIP v1.1 specification and trust certification standards  
+🟢 **Trust Score Model** — ACE framework scoring (reference implementation, early data)  
 🟢 **Agent Registration** — Challenge-response verification system  
-🟢 **Moltbook Integration** — Experimental identity verification and karma bootstrap  
-🟢 **V-Token Verification** — Cryptographic identity proof (no auth required)  
-🟢 **Standards Documentation** — ATIP v1.1 specification and certification standards  
-🟢 **MCP Protocol Support** — Early integration with Model Context Protocol  
+🟡 **Moltbook Integration** — Experimental identity verification and karma bootstrap  
+🟡 **V-Token Verification** — Experimental cryptographic identity proof  
+🟡 **MCP Protocol Support** — Early integration with Model Context Protocol  
 
-**Early network status**: Basic trust infrastructure operational, no public marketplace data yet.
+**Current status**: Reference API and draft standards are public. Network is in early bootstrap — no public marketplace data yet. We're seeking design partners to validate the approach.
 
 ```javascript
 // Query an agent's trust score
