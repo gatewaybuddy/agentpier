@@ -1,22 +1,17 @@
-infra/.aws-sam/
-mcp/node_modules/
-__pycache__/
-*.pyc
-.aws-sam/
-venv/
-test_env/
-*.egg-info/
-agents/
-
-# Production content filter (private patterns)
-src/utils/content_filter.py.production
 
 # Private production patterns (not in public repo)
-src/utils/content_filter_patterns.py
-src/utils/content_filter_patterns.py
-src/utils/content_filter.py.production
-samconfig.toml
-samconfig.toml
-
+# Production content filter (private patterns)
 # SDK development environments
+*.egg-info/
+*.pyc
+.aws-sam/
+__pycache__/
+agents/
+infra/.aws-sam/
+mcp/node_modules/
+samconfig.toml
 sdk/python/format_env/
+src/utils/content_filter.py.production
+src/utils/content_filter_patterns.py
+test_env/
+venv/
