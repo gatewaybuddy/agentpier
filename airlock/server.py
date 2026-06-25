@@ -394,5 +394,10 @@ def _write(obj: dict) -> None:
     sys.stdout.flush()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for the `airlock-mcp` console script."""
     run_stdio()
+
+
+if __name__ == "__main__":
+    main()

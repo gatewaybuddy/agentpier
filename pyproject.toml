@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentpier-airlock"
+version = "0.1.0"
+description = "Redaction engine + MCP server for AI agent traces — catches infra identifiers AND PII in one pass"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    {name = "AgentPier", email = "hello@agentpier.com"},
+]
+keywords = [
+    "redaction", "pii", "mcp", "ai-agents", "security",
+    "infra-identifiers", "privacy", "agent-traces",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/gatewaybuddy/agentpier"
+Repository = "https://github.com/gatewaybuddy/agentpier"
+"Bug Tracker" = "https://github.com/gatewaybuddy/agentpier/issues"
+
+[project.scripts]
+airlock-mcp = "airlock.server:main"
+
+[tool.setuptools.packages.find]
+include = ["airlock*"]
+
+[tool.setuptools.package-data]
+airlock = ["py.typed"]
